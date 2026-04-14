@@ -211,9 +211,15 @@ If a published chart is available in GHCR, install it directly:
 
 ```bash
 helm install shukra-operator oci://ghcr.io/sandy001-kki/charts/shukra-operator \
-  --version 0.1.0 \
+  --version 0.1.1 \
   -n shukra-system \
   --create-namespace
+```
+
+The matching published controller image for that release is:
+
+```text
+ghcr.io/sandy001-kki/shukra-operator:0.1.1
 ```
 
 ## First user workflow
@@ -410,6 +416,13 @@ Git tags like `v0.1.0` drive:
 - the container image tag
 - the Helm chart `version`
 - the Helm chart `appVersion`
+
+The git tag keeps its leading `v`, but published OCI artifact versions do not.
+For example:
+
+- Git tag: `v0.1.1`
+- GHCR image: `ghcr.io/sandy001-kki/shukra-operator:0.1.1`
+- OCI chart version: `0.1.1`
 
 Charts are published as OCI artifacts to:
 
