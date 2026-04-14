@@ -1,0 +1,15 @@
+apiVersion: apps.shukra.io/v1beta1
+kind: AppEnvironment
+metadata:
+  name: ingress-app
+spec:
+  app:
+    image: ghcr.io/sandy001-kki/sample:1.0.0
+    resources:
+      requests: {cpu: 100m, memory: 128Mi}
+      limits: {cpu: 500m, memory: 512Mi}
+  ingress:
+    enabled: true
+    host: ingress.example.com
+    path: /
+    tlsSecretName: ingress-app-tls

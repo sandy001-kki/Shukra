@@ -1,0 +1,30 @@
+image:
+  repository: ghcr.io/sandy001-kki/shukra-operator
+  tag: latest
+  pullPolicy: IfNotPresent
+replicaCount: 1
+leaderElection:
+  enabled: true
+  namespace: shukra-system
+watchNamespace: ""
+maxConcurrentReconciles: 5
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+certmanager:
+  enabled: true
+  issuerKind: Issuer
+  issuerName: shukra-selfsigned-issuer
+metrics:
+  enabled: true
+  port: 8443
+serviceAccount:
+  create: true
+  name: shukra-operator

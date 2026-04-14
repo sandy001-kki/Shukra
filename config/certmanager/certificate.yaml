@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: shukra-operator-webhook-cert
+  namespace: shukra-system
+spec:
+  secretName: shukra-operator-webhook-tls
+  dnsNames:
+    - shukra-operator-webhook-service.shukra-system.svc
+    - shukra-operator-webhook-service.shukra-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: shukra-selfsigned-issuer

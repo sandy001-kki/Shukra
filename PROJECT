@@ -1,0 +1,16 @@
+domain: mydomain.io
+layout:
+- go.kubebuilder.io/v4
+projectName: shukra-operator
+repo: github.com/shukra-operator/shukra-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: mydomain.io
+  group: apps
+  kind: AppEnvironment
+  path: github.com/shukra-operator/shukra-operator/api/v1alpha1
+  version: v1alpha1
+version: "3"

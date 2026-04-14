@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shukra-operator
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shukra-operator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: shukra-operator
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      securityContext:
+{{ toYaml .Values.securityContext | indent 8 }}
+      containers:
+        - name: manager
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --max-concurrent-reconciles={{ .Values.maxConcurrentReconciles }}
+            - --watch-namespace={{ .Values.watchNamespace }}
+            - --metrics-bind-address=:8443
+            - --health-probe-bind-address=:8081
+            - --webhook-port=9443
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+          ports:
+            - name: https-webhook
+              containerPort: 9443
+              protocol: TCP
+            - name: https-metrics
+              containerPort: 8443
+              protocol: TCP
+            - name: healthz
+              containerPort: 8081
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: healthz
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            # controller-runtime expects webhook TLS material at this path unless
+            # a custom cert dir is configured.
+            - name: webhook-certs
+              mountPath: /tmp/k8s-webhook-server/serving-certs
+              readOnly: true
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      volumes:
+        - name: webhook-certs
+          secret:
+            secretName: shukra-operator-webhook-tls

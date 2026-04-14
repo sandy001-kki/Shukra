@@ -1,0 +1,14 @@
+{{- if .Values.certmanager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: shukra-operator-webhook-cert
+  namespace: {{ .Release.Namespace }}
+spec:
+  secretName: shukra-operator-webhook-tls
+  dnsNames:
+    - shukra-operator-webhook.{{ .Release.Namespace }}.svc
+  issuerRef:
+    kind: {{ .Values.certmanager.issuerKind }}
+    name: {{ .Values.certmanager.issuerName }}
+{{- end }}

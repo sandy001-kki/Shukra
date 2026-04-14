@@ -1,0 +1,21 @@
+apiVersion: apps.shukra.io/v1beta1
+kind: AppEnvironment
+metadata:
+  name: restore-app
+spec:
+  app:
+    image: ghcr.io/sandy001-kki/sample:1.0.0
+    resources:
+      requests: {cpu: 100m, memory: 128Mi}
+      limits: {cpu: 500m, memory: 512Mi}
+  backup:
+    enabled: true
+    schedule: "0 */6 * * *"
+    destination: s3://backups/restore-app
+    retentionPolicy: 30d
+  restore:
+    enabled: true
+    image: ghcr.io/sandy001-kki/restore:1.0.0
+    source: s3://backups/restore-app/backup-001
+    triggerNonce: restore-20240101-001
+    mode: full

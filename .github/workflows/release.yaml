@@ -1,0 +1,43 @@
+name: release
+
+# Release is intentionally separate from CI because it needs write permissions,
+# registry publishing, and immutable semver tags that should only run on
+# versioned releases.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract version
+        id: version
+        # The git tag is the single source of truth for both the image tag and
+        # the packaged chart version, which keeps release assets aligned.
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/sandy001-kki/shukra-operator:${{ steps.version.outputs.version }}
+            ghcr.io/sandy001-kki/shukra-operator:latest
+      - uses: azure/setup-helm@v4
+      - run: helm package charts/shukra-operator --version ${{ steps.version.outputs.version }} --app-version ${{ steps.version.outputs.version }}
+      - run: helm push shukra-operator-${{ steps.version.outputs.version }}.tgz oci://ghcr.io/sandy001-kki/charts
+      - run: Get-FileHash shukra-operator-${{ steps.version.outputs.version }}.tgz -Algorithm SHA256 | Select-Object -ExpandProperty Hash > SHA256SUMS.txt
+        shell: pwsh

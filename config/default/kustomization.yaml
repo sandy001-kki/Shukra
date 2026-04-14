@@ -1,0 +1,8 @@
+# This kustomization composes the install surface for a default deployment. It
+# exists so contributors and CI can render a single installation overlay.
+resources:
+  - ../crd
+  - ../rbac
+  - ../manager
+  - ../webhook
+  - ../certmanager

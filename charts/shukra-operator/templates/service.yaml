@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: shukra-operator-webhook
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app.kubernetes.io/name: shukra-operator
+  ports:
+    - name: webhook
+      port: 443
+      targetPort: 9443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shukra-operator-metrics
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app.kubernetes.io/name: shukra-operator
+  ports:
+    - name: metrics
+      port: {{ .Values.metrics.port }}
+      targetPort: 8443

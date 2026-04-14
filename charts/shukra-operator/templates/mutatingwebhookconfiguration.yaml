@@ -1,0 +1,21 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: shukra-operator-mutating
+  annotations:
+    cert-manager.io/inject-ca-from: shukra-system/shukra-operator-webhook-cert
+webhooks:
+  - name: mappenv.apps.shukra.io
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: Fail
+    clientConfig:
+      service:
+        name: shukra-operator-webhook
+        namespace: {{ .Release.Namespace }}
+        path: /mutate-apps-shukra-io-v1beta1-appenvironment
+    rules:
+      - apiGroups: ["apps.shukra.io"]
+        apiVersions: ["v1beta1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["appenvironments"]

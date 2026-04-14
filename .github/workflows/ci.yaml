@@ -1,0 +1,36 @@
+name: ci
+
+# CI stays separate from release so pull requests can validate quickly without
+# requiring registry pushes or release permissions.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+      - run: make manifests generate
+      - run: go vet ./...
+      - run: golangci-lint run
+      - run: make test
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make docker-build
+
+  helm-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: helm lint charts/shukra-operator
