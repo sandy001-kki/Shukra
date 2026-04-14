@@ -2,6 +2,11 @@
 
 Shukra Operator — One YAML. Complete Environment.
 
+[![CI](https://github.com/sandy001-kki/Shukra/actions/workflows/ci.yaml/badge.svg)](https://github.com/sandy001-kki/Shukra/actions/workflows/ci.yaml)
+[![Release](https://github.com/sandy001-kki/Shukra/actions/workflows/release.yaml/badge.svg)](https://github.com/sandy001-kki/Shukra/actions/workflows/release.yaml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Helm Chart](https://img.shields.io/badge/helm-oci%20ghcr-blue)](https://github.com/sandy001-kki/Shukra)
+
 Shukra Operator is a production-grade Kubernetes Operator that lets users define
 an entire application environment through a single `AppEnvironment` custom
 resource. Instead of maintaining many separate Kubernetes manifests, a user
