@@ -1,7 +1,7 @@
 # Shukra Operator
 
 <p align="center">
-  <img src="docs/assets/shukla.png" alt="Shukra sage" width="720" />
+  <img src="docs/assets/shukla.png" alt="Shukra sage" width="520" />
 </p>
 
 Shukra Operator — One YAML. Complete Environment.
