@@ -37,7 +37,16 @@ jobs:
             ghcr.io/sandy001-kki/shukra-operator:${{ steps.version.outputs.version }}
             ghcr.io/sandy001-kki/shukra-operator:latest
       - uses: azure/setup-helm@v4
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
       - run: helm package charts/shukra-operator --version ${{ steps.version.outputs.version }} --app-version ${{ steps.version.outputs.version }}
       - run: helm push shukra-operator-${{ steps.version.outputs.version }}.tgz oci://ghcr.io/sandy001-kki/charts
       - run: Get-FileHash shukra-operator-${{ steps.version.outputs.version }}.tgz -Algorithm SHA256 | Select-Object -ExpandProperty Hash > SHA256SUMS.txt
         shell: pwsh
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            shukra-operator-${{ steps.version.outputs.version }}.tgz
+            SHA256SUMS.txt
+            config/crd/bases/*.yaml

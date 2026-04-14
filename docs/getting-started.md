@@ -89,6 +89,7 @@ kubectl logs -n shukra-system deploy/shukra-operator
 
 For more detail, read:
 
+- `docs/learning-path.md`
 - `docs/architecture.md`
 - `docs/tenancy.md`
 - `docs/troubleshooting.md`

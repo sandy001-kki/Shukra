@@ -161,6 +161,25 @@ kubectl get deploy,svc,cm,pods -n default
 If you want a more beginner-friendly walkthrough, read
 [docs/getting-started.md](docs/getting-started.md).
 
+If you want a structured progression from total beginner to contributor, read
+[docs/learning-path.md](docs/learning-path.md).
+
+## Demo snapshots
+
+Live cluster snapshots generated from a working local Shukra run:
+
+`AppEnvironment` present in the cluster:
+
+![AppEnvironment status](/D:/Shukra/docs/assets/appenvironment-status.png)
+
+Generated Kubernetes resources:
+
+![Generated resources](/D:/Shukra/docs/assets/generated-resources.png)
+
+Operator log sample:
+
+![Operator log sample](/D:/Shukra/docs/assets/operator-log.png)
+
 ## One-command local bootstrap
 
 If you want Shukra to set up a complete local workflow for you on Windows, run:
@@ -327,6 +346,9 @@ Restore runs are controlled by `spec.restore.triggerNonce`. Shukra only creates
 a new restore `Job` when the nonce changes, which makes restore execution
 intentional and idempotent.
 
+For a deeper hands-on walkthrough, see
+[docs/migration-restore-walkthrough.md](docs/migration-restore-walkthrough.md).
+
 ## Namespace tenancy and secret model
 
 Shukra treats a Kubernetes namespace as the tenant boundary.
@@ -406,6 +428,8 @@ The repository contains:
 
 - [docs/beginner-guide.md](docs/beginner-guide.md)
 - [docs/getting-started.md](docs/getting-started.md)
+- [docs/learning-path.md](docs/learning-path.md)
+- [docs/migration-restore-walkthrough.md](docs/migration-restore-walkthrough.md)
 - [docs/api.md](docs/api.md)
 - [docs/architecture.md](docs/architecture.md)
 - [docs/tenancy.md](docs/tenancy.md)

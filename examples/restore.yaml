@@ -27,6 +27,8 @@ spec:
   restore:
     enabled: true
     image: busybox:1.36
-    source: s3://backups/restore-app/backup-001
+    # For a local demo, the restore builder executes `source` through `/bin/sh -c`.
+    # In production, use a restore image whose entrypoint understands your real backup source.
+    source: "echo restoring backup restore-20240101-001 && sleep 5"
     triggerNonce: restore-20240101-001
     mode: full
