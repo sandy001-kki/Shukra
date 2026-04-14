@@ -127,6 +127,22 @@ That chart installs:
 - cert-manager issuer and certificate resources
 - metrics and webhook Services
 
+## Five minute quickstart
+
+If you are new to the project, this is the shortest useful path:
+
+```bash
+git clone https://github.com/sandy001-kki/Shukra.git
+cd Shukra
+helm install shukra-operator charts/shukra-operator -n shukra-system --create-namespace
+kubectl apply -f examples/basic.yaml
+kubectl get appenvironment basic-app -n default -o yaml
+kubectl get deploy,svc,cm,pods -n default
+```
+
+If you want a more beginner-friendly walkthrough, read
+[docs/getting-started.md](docs/getting-started.md).
+
 ## Install from OCI Helm chart
 
 If a published chart is available in GHCR, install it directly:
@@ -345,6 +361,7 @@ The repository contains:
 
 ## Documentation
 
+- [docs/getting-started.md](docs/getting-started.md)
 - [docs/api.md](docs/api.md)
 - [docs/architecture.md](docs/architecture.md)
 - [docs/tenancy.md](docs/tenancy.md)

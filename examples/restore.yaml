@@ -4,7 +4,18 @@ metadata:
   name: restore-app
 spec:
   app:
-    image: ghcr.io/sandy001-kki/sample:1.0.0
+    image: nginx:1.27
+    containerPort: 80
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 5
     resources:
       requests: {cpu: 100m, memory: 128Mi}
       limits: {cpu: 500m, memory: 512Mi}
@@ -15,7 +26,7 @@ spec:
     retentionPolicy: 30d
   restore:
     enabled: true
-    image: ghcr.io/sandy001-kki/restore:1.0.0
+    image: busybox:1.36
     source: s3://backups/restore-app/backup-001
     triggerNonce: restore-20240101-001
     mode: full

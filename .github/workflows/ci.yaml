@@ -22,6 +22,33 @@ jobs:
       - run: golangci-lint run
       - run: make test
 
+  smoke-kind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+      - uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: shukra-ci
+      - uses: azure/setup-helm@v4
+      - uses: azure/setup-kubectl@v4
+      - run: docker build -t shukra-operator:ci .
+      - run: kind load docker-image shukra-operator:ci --name shukra-ci
+      - run: helm repo add jetstack https://charts.jetstack.io
+      - run: helm repo update
+      - run: kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f -
+      - run: kubectl create namespace shukra-system --dry-run=client -o yaml | kubectl apply -f -
+      - run: helm upgrade --install cert-manager jetstack/cert-manager --namespace cert-manager --version v1.17.4 --set crds.enabled=true --wait --timeout 10m
+      - run: kubectl wait --for=condition=Ready pods --all -n cert-manager --timeout=600s
+      - run: helm upgrade --install shukra-operator charts/shukra-operator -n shukra-system --set image.repository=shukra-operator --set image.tag=ci --set image.pullPolicy=IfNotPresent --set leaderElection.namespace=shukra-system --wait --timeout 10m
+      - run: kubectl apply -f examples/basic.yaml
+      - run: kubectl rollout status deployment/basic-app-deployment -n default --timeout=300s
+      - run: kubectl get appenvironment basic-app -n default -o yaml
+      - run: kubectl get deploy,svc,cm,pods -n default
+      - run: kubectl logs -n shukra-system deploy/shukra-operator --tail=200
+
   build:
     runs-on: ubuntu-latest
     steps:
