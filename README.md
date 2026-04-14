@@ -16,6 +16,42 @@ required resources for them.
 
 Repository: [github.com/sandy001-kki/Shukra](https://github.com/sandy001-kki/Shukra)
 
+## Start here
+
+| If you are... | Read this first | Then do this |
+| --- | --- | --- |
+| completely new to Docker or Kubernetes | [docs/beginner-guide.md](docs/beginner-guide.md) | [docs/getting-started.md](docs/getting-started.md) |
+| a user who wants the shortest path to a working environment | [Five minute quickstart](#five-minute-quickstart) | [Shukra CLI](#shukra-cli) |
+| a contributor who wants architecture and release context | [docs/learning-path.md](docs/learning-path.md) | [CONTRIBUTING.md](CONTRIBUTING.md) |
+
+## At a glance
+
+| One thing you write | What Shukra creates for you |
+| --- | --- |
+| `AppEnvironment` YAML | `Deployment`, `Service`, `ConfigMap`, `Ingress`, `HPA`, migration `Job`, restore `Job`, backup `CronJob`, `NetworkPolicy`, `PDB` |
+
+```mermaid
+flowchart LR
+    A["AppEnvironment"] --> B["Webhooks"]
+    B --> C["Shukra Controller"]
+    C --> D["Deployment"]
+    C --> E["Service"]
+    C --> F["ConfigMap"]
+    C --> G["Ingress"]
+    C --> H["Jobs and CronJobs"]
+    C --> I["Security Resources"]
+    C --> J["Status, Events, Metrics"]
+```
+
+## Quick links
+
+- [Completely new to Docker or Kubernetes?](#completely-new-to-docker-or-kubernetes)
+- [One-command local bootstrap](#one-command-local-bootstrap)
+- [Install from OCI Helm chart](#install-from-oci-helm-chart)
+- [Shukra CLI](#shukra-cli)
+- [Examples included in this repo](#examples-included-in-this-repo)
+- [Documentation](#documentation)
+
 ## Completely new to Docker or Kubernetes?
 
 Read [docs/beginner-guide.md](docs/beginner-guide.md) first.
@@ -174,15 +210,15 @@ Live cluster snapshots generated from a working local Shukra run:
 
 `AppEnvironment` present in the cluster:
 
-![AppEnvironment status](/D:/Shukra/docs/assets/appenvironment-status.png)
+![AppEnvironment status](docs/assets/appenvironment-status.png)
 
 Generated Kubernetes resources:
 
-![Generated resources](/D:/Shukra/docs/assets/generated-resources.png)
+![Generated resources](docs/assets/generated-resources.png)
 
 Operator log sample:
 
-![Operator log sample](/D:/Shukra/docs/assets/operator-log.png)
+![Operator log sample](docs/assets/operator-log.png)
 
 ## One-command local bootstrap
 
@@ -221,7 +257,7 @@ If a published chart is available in GHCR, install it directly:
 
 ```bash
 helm install shukra-operator oci://ghcr.io/sandy001-kki/charts/shukra-operator \
-  --version 0.2.0 \
+  --version 0.2.2 \
   -n shukra-system \
   --create-namespace
 ```
@@ -229,7 +265,7 @@ helm install shukra-operator oci://ghcr.io/sandy001-kki/charts/shukra-operator \
 The matching published controller image for that release is:
 
 ```text
-ghcr.io/sandy001-kki/shukra-operator:0.2.0
+ghcr.io/sandy001-kki/shukra-operator:0.2.2
 ```
 
 The GitHub release also includes standalone CLI binaries for Linux, Windows,
@@ -459,9 +495,9 @@ Git tags like `v0.1.0` drive:
 The git tag keeps its leading `v`, but published OCI artifact versions do not.
 For example:
 
-- Git tag: `v0.2.0`
-- GHCR image: `ghcr.io/sandy001-kki/shukra-operator:0.2.0`
-- OCI chart version: `0.2.0`
+- Git tag: `v0.2.2`
+- GHCR image: `ghcr.io/sandy001-kki/shukra-operator:0.2.2`
+- OCI chart version: `0.2.2`
 
 Charts are published as OCI artifacts to:
 

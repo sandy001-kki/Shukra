@@ -20,3 +20,29 @@ func runCommand(name string, args ...string) error {
 	}
 	return nil
 }
+
+func appendHelmConnectionArgs(opts *RootOptions, args []string) []string {
+	if opts == nil {
+		return args
+	}
+	if opts.Kubeconfig != "" {
+		args = append(args, "--kubeconfig", opts.Kubeconfig)
+	}
+	if opts.Context != "" {
+		args = append(args, "--kube-context", opts.Context)
+	}
+	return args
+}
+
+func appendKubectlConnectionArgs(opts *RootOptions, args []string) []string {
+	if opts == nil {
+		return args
+	}
+	if opts.Kubeconfig != "" {
+		args = append(args, "--kubeconfig", opts.Kubeconfig)
+	}
+	if opts.Context != "" {
+		args = append(args, "--context", opts.Context)
+	}
+	return args
+}

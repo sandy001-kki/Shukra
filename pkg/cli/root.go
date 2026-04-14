@@ -3,11 +3,7 @@
 // behavior so the CLI remains consistent across features.
 package cli
 
-import (
-	"fmt"
-
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
 // RootOptions holds shared CLI state that subcommands need to talk to a
 // Kubernetes cluster or invoke local tooling like helm and kubectl.
@@ -26,6 +22,10 @@ func Execute(version, commit, date string) error {
 		Short:         "Shukra CLI for installing and managing AppEnvironment resources",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Example: `  shukra install --operator-namespace shukra-system
+  shukra env init demo-app --image nginx:1.27 --output demo-app.yaml
+  shukra env apply -f demo-app.yaml
+  shukra env status demo-app -n default`,
 		Long: `Shukra is the human-friendly CLI companion to the Shukra Operator.
 
 It helps users install the operator, bootstrap local clusters, generate starter
@@ -46,8 +46,4 @@ memorizing raw kubectl and helm commands.`,
 	)
 
 	return rootCmd.Execute()
-}
-
-func formatVersion(version, commit, date string) string {
-	return fmt.Sprintf("shukra version=%s commit=%s date=%s", version, commit, date)
 }

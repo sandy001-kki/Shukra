@@ -29,7 +29,7 @@ func newEnvCommand(opts *RootOptions) *cobra.Command {
 
 	envCmd.AddCommand(
 		newEnvInitCommand(opts),
-		newEnvApplyCommand(),
+		newEnvApplyCommand(opts),
 		newEnvStatusCommand(opts),
 		newEnvPauseCommand(opts, true),
 		newEnvPauseCommand(opts, false),
@@ -130,7 +130,7 @@ func renderStarterManifest(name, namespace, image string, replicas, containerPor
 	})
 }
 
-func newEnvApplyCommand() *cobra.Command {
+func newEnvApplyCommand(opts *RootOptions) *cobra.Command {
 	var filePath string
 
 	cmd := &cobra.Command{
@@ -140,7 +140,14 @@ func newEnvApplyCommand() *cobra.Command {
 			if filePath == "" {
 				return fmt.Errorf("--file is required")
 			}
-			return runCommand("kubectl", "apply", "-f", filePath)
+			kubectlArgs := appendKubectlConnectionArgs(opts, []string{"apply", "-f", filePath})
+			printTitle(cmd.OutOrStdout(), "Applying AppEnvironment")
+			printKV(cmd.OutOrStdout(), "File", filePath)
+			if err := runCommand("kubectl", kubectlArgs...); err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), success("OK  Manifest applied"))
+			return nil
 		},
 	}
 
@@ -364,15 +371,16 @@ func newEnvRestoreCommand(opts *RootOptions) *cobra.Command {
 }
 
 func printStatusSummary(cmd *cobra.Command, appEnv *appsv1beta1.AppEnvironment) {
-	fmt.Fprintf(cmd.OutOrStdout(), "Name: %s\n", appEnv.Name)
-	fmt.Fprintf(cmd.OutOrStdout(), "Namespace: %s\n", appEnv.Namespace)
-	fmt.Fprintf(cmd.OutOrStdout(), "Phase: %s\n", appEnv.Status.Phase)
-	fmt.Fprintf(cmd.OutOrStdout(), "Observed generation: %d\n", appEnv.Status.ObservedGeneration)
-	fmt.Fprintf(cmd.OutOrStdout(), "URL: %s\n", emptyDash(appEnv.Status.URL))
-	fmt.Fprintf(cmd.OutOrStdout(), "Last error: %s\n", emptyDash(appEnv.Status.LastError))
-	fmt.Fprintf(cmd.OutOrStdout(), "Failure count: %d\n", appEnv.Status.FailureCount)
-	fmt.Fprintf(cmd.OutOrStdout(), "Last migration: %s\n", emptyDash(appEnv.Status.LastAppliedMigrationID))
-	fmt.Fprintf(cmd.OutOrStdout(), "Last restore nonce: %s\n", emptyDash(appEnv.Status.LastProcessedRestoreNonce))
+	printTitle(cmd.OutOrStdout(), "AppEnvironment Status")
+	printKV(cmd.OutOrStdout(), "Name", appEnv.Name)
+	printKV(cmd.OutOrStdout(), "Namespace", appEnv.Namespace)
+	printKV(cmd.OutOrStdout(), "Phase", appEnv.Status.Phase)
+	printKV(cmd.OutOrStdout(), "Observed gen", fmt.Sprintf("%d", appEnv.Status.ObservedGeneration))
+	printKV(cmd.OutOrStdout(), "URL", emptyDash(appEnv.Status.URL))
+	printKV(cmd.OutOrStdout(), "Last error", emptyDash(appEnv.Status.LastError))
+	printKV(cmd.OutOrStdout(), "Failure count", fmt.Sprintf("%d", appEnv.Status.FailureCount))
+	printKV(cmd.OutOrStdout(), "Migration ID", emptyDash(appEnv.Status.LastAppliedMigrationID))
+	printKV(cmd.OutOrStdout(), "Restore nonce", emptyDash(appEnv.Status.LastProcessedRestoreNonce))
 
 	childResources := []string{
 		appEnv.Status.ChildResources.ConfigMapName,
@@ -388,18 +396,15 @@ func printStatusSummary(cmd *cobra.Command, appEnv *appsv1beta1.AppEnvironment) 
 	}
 	childResources = filterEmpty(childResources)
 	sort.Strings(childResources)
-	fmt.Fprintf(cmd.OutOrStdout(), "Child resources: %s\n", emptyDash(strings.Join(childResources, ", ")))
+	fmt.Fprintln(cmd.OutOrStdout())
+	printTitle(cmd.OutOrStdout(), "Child Resources")
+	printNote(cmd.OutOrStdout(), "-", emptyDash(strings.Join(childResources, ", ")))
 
-	fmt.Fprintln(cmd.OutOrStdout(), "Conditions:")
+	fmt.Fprintln(cmd.OutOrStdout())
+	printTitle(cmd.OutOrStdout(), "Conditions")
 	for _, condition := range appEnv.Status.Conditions {
-		fmt.Fprintf(
-			cmd.OutOrStdout(),
-			"  - %s=%s reason=%s message=%q\n",
-			condition.Type,
-			condition.Status,
-			condition.Reason,
-			condition.Message,
-		)
+		line := fmt.Sprintf("%s=%s reason=%s message=%q", condition.Type, condition.Status, condition.Reason, condition.Message)
+		printNote(cmd.OutOrStdout(), "-", line)
 	}
 }
 

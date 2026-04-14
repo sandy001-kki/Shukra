@@ -36,11 +36,11 @@ func TestControllers(t *testing.T) {
 }
 
 var (
-	testEnv   *envtest.Environment
-	k8sClient client.Client
-	ctx       context.Context
-	cancel    context.CancelFunc
-	scheme    *runtime.Scheme
+	testEnv    *envtest.Environment
+	k8sClient  client.Client
+	ctx        context.Context
+	cancel     context.CancelFunc
+	scheme     *runtime.Scheme
 	envStarted bool
 )
 
@@ -222,7 +222,7 @@ var _ = Describe("AppEnvironment", func() {
 		alpha := &appsv1alpha1.AppEnvironment{
 			ObjectMeta: metav1.ObjectMeta{Name: "convert", Namespace: "demo"},
 			Spec: appsv1alpha1.AppEnvironmentSpec{
-				App: appsv1alpha1.AppSpec{Image: "nginx:1.27", SecretRefs: []string{"demo-secret"}},
+				App:      appsv1alpha1.AppSpec{Image: "nginx:1.27", SecretRefs: []string{"demo-secret"}},
 				Security: appsv1alpha1.SecuritySpec{NetworkPolicy: true},
 			},
 		}
@@ -249,8 +249,8 @@ func basicEnv(name string) *appsv1beta1.AppEnvironment {
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "demo"},
 		Spec: appsv1beta1.AppEnvironmentSpec{
 			App: appsv1beta1.AppSpec{
-				Image: "nginx:1.27",
-				Replicas: &replicas,
+				Image:      "nginx:1.27",
+				Replicas:   &replicas,
 				SecretRefs: []appsv1beta1.SecretRef{{Name: "demo-secret", MountAs: "env"}},
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{corev1.ResourceCPU: resourceMustParse("100m"), corev1.ResourceMemory: resourceMustParse("128Mi")},

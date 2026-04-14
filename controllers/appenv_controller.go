@@ -44,18 +44,18 @@ import (
 // never creates, mutates, or deletes them.
 // Events only need create;patch because event writers append lifecycle records.
 // Leases are required for controller-runtime leader election in HA deployments.
-//+kubebuilder:rbac:groups=apps.shukra.io,resources=appenvironments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps.shukra.io,resources=appenvironments/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=apps.shukra.io,resources=appenvironments/finalizers,verbs=update
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=services;configmaps,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
-//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses;networkpolicies,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=batch,resources=jobs;cronjobs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
-//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps.shukra.io,resources=appenvironments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps.shukra.io,resources=appenvironments/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps.shukra.io,resources=appenvironments/finalizers,verbs=update
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=services;configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses;networkpolicies,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs;cronjobs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 type AppEnvironmentReconciler struct {
 	client.Client
 	Scheme                  *runtime.Scheme
@@ -164,9 +164,9 @@ func (r *AppEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	appEnv.Status.LastError = ""
+	statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionReady, metav1.ConditionTrue, "Ready", "All resources reconciled", appEnv.Generation)
 	appEnv.Status.Phase = statusutil.ComputePhase(appEnv.Status.Conditions, false, appEnv.Spec.Restore.Enabled && appEnv.Status.LastProcessedRestoreNonce != appEnv.Spec.Restore.TriggerNonce)
 	appEnv.Status.LastSuccessfulReconcileTime = &now
-	statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionReady, metav1.ConditionTrue, "Ready", "All resources reconciled", appEnv.Generation)
 	return ctrl.Result{}, r.Status().Update(ctx, appEnv)
 }
 

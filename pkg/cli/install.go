@@ -45,7 +45,19 @@ func newInstallCommand(opts *RootOptions) *cobra.Command {
 				helmArgs = append(helmArgs, "--set", fmt.Sprintf("image.tag=%s", imageTag))
 			}
 
-			return runCommand("helm", helmArgs...)
+			helmArgs = appendHelmConnectionArgs(opts, helmArgs)
+			printTitle(cmd.OutOrStdout(), "Installing Shukra Operator")
+			printKV(cmd.OutOrStdout(), "Namespace", operatorNamespace)
+			printKV(cmd.OutOrStdout(), "Chart", releaseChart)
+			if chartVersion != "" {
+				printKV(cmd.OutOrStdout(), "Chart version", chartVersion)
+			}
+
+			if err := runCommand("helm", helmArgs...); err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), success("OK  Shukra Operator is installed"))
+			return nil
 		},
 	}
 
@@ -67,11 +79,17 @@ func newUninstallCommand(opts *RootOptions) *cobra.Command {
 		Use:   "uninstall",
 		Short: "Uninstall the Shukra Operator Helm release",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runCommand("helm", "uninstall", "shukra-operator", "-n", operatorNamespace)
+			helmArgs := appendHelmConnectionArgs(opts, []string{"uninstall", "shukra-operator", "-n", operatorNamespace})
+			printTitle(cmd.OutOrStdout(), "Uninstalling Shukra Operator")
+			printKV(cmd.OutOrStdout(), "Namespace", operatorNamespace)
+			if err := runCommand("helm", helmArgs...); err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), success("OK  Shukra Operator is uninstalled"))
+			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&operatorNamespace, "operator-namespace", "shukra-system", "Namespace where the operator is installed.")
-	_ = opts
 	return cmd
 }

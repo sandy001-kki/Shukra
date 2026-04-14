@@ -35,7 +35,7 @@ shukra install --operator-namespace shukra-system
 Install the operator from the published OCI chart:
 
 ```bash
-shukra install --oci --chart-version 0.2.0 --operator-namespace shukra-system
+shukra install --oci --chart-version 0.2.2 --operator-namespace shukra-system
 ```
 
 Bootstrap a local Windows development cluster:

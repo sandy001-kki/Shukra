@@ -3,18 +3,17 @@
 // release issues.
 package cli
 
-import (
-	"fmt"
-
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
 func newVersionCommand(version, commit, date string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Print the Shukra CLI version",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Fprintln(cmd.OutOrStdout(), formatVersion(version, commit, date))
+			printTitle(cmd.OutOrStdout(), "Shukra CLI")
+			printKV(cmd.OutOrStdout(), "Version", version)
+			printKV(cmd.OutOrStdout(), "Commit", commit)
+			printKV(cmd.OutOrStdout(), "Build date", date)
 			return nil
 		},
 	}
