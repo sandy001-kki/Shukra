@@ -18,6 +18,17 @@ helm install shukra-operator charts/shukra-operator \
   --create-namespace
 ```
 
+## One-command local workflow on Windows
+
+If you want the repository to do the local setup for you, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\hack\bootstrap-local.ps1
+```
+
+This automates Docker startup, kind cluster creation, cert-manager install,
+operator image build, image load, Helm install, and applying the basic example.
+
 ## Apply your first environment
 
 Use the working basic example:

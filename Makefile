@@ -59,3 +59,7 @@ helm-package:
 .PHONY: docs-generate
 docs-generate:
 	$(CRD_REF_DOCS) --source-path=./api --renderer=markdown --output-path=./docs/api.md
+
+.PHONY: bootstrap-local
+bootstrap-local:
+	powershell -ExecutionPolicy Bypass -File .\hack\bootstrap-local.ps1

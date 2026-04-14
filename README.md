@@ -143,6 +143,31 @@ kubectl get deploy,svc,cm,pods -n default
 If you want a more beginner-friendly walkthrough, read
 [docs/getting-started.md](docs/getting-started.md).
 
+## One-command local bootstrap
+
+If you want Shukra to set up a complete local workflow for you on Windows, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\hack\bootstrap-local.ps1
+```
+
+That script will:
+
+- start Docker Desktop
+- create a kind cluster
+- install cert-manager
+- build the operator image
+- load the image into kind
+- install the Shukra Helm chart
+- apply `examples/basic.yaml`
+- wait for the sample Deployment rollout
+
+There is also a matching Make target:
+
+```bash
+make bootstrap-local
+```
+
 ## Install from OCI Helm chart
 
 If a published chart is available in GHCR, install it directly:
