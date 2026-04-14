@@ -42,6 +42,7 @@ memorizing raw kubectl and helm commands.`,
 		newInstallCommand(opts),
 		newUninstallCommand(opts),
 		newBootstrapCommand(),
+		newChatCommand(opts, version, commit, date),
 		newEnvCommand(opts),
 	)
 

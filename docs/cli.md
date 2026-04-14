@@ -18,6 +18,34 @@ The CLI is the user-facing interface. It helps people:
 
 The CLI does not replace the operator. It makes the operator easier to use.
 
+## Chat mode
+
+Shukra also includes an English-first chat mode for PowerShell users who want a
+more guided interface.
+
+Open the interactive assistant:
+
+```powershell
+shukra chat
+```
+
+Run one English command and exit:
+
+```powershell
+shukra chat --message "status basic-app"
+```
+
+Example phrases:
+
+- `status basic-app`
+- `apply examples/basic.yaml`
+- `show operator logs`
+- `pause basic-app`
+- `resume basic-app`
+- `delete basic-app`
+- `install operator from oci version 0.2.2`
+- `bootstrap local`
+
 ## Core commands
 
 Print the CLI version:

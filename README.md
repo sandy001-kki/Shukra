@@ -68,6 +68,7 @@ flowchart LR
 - [One-command local bootstrap](#one-command-local-bootstrap)
 - [Install from OCI Helm chart](#install-from-oci-helm-chart)
 - [Shukra CLI](#shukra-cli)
+- [Shukra Chat](#shukra-chat)
 - [Examples included in this repo](#examples-included-in-this-repo)
 - [Documentation](#documentation)
 - [Security policy](SECURITY.md)
@@ -224,6 +225,35 @@ If you want a structured progression from total beginner to contributor, read
 
 If you want the command-line interface guide, read
 [docs/cli.md](docs/cli.md).
+
+## Shukra Chat
+
+If you want a more assistant-like terminal experience, use the new chat mode:
+
+```powershell
+go run .\cmd\shukra chat
+```
+
+You can speak to it in simple English:
+
+```text
+status basic-app
+apply examples/basic.yaml
+show operator logs
+pause basic-app
+resume basic-app
+bootstrap local
+quit
+```
+
+You can also run one English command without opening the full prompt:
+
+```powershell
+go run .\cmd\shukra chat --message "status basic-app"
+```
+
+This mode is designed to work cleanly in PowerShell for users who prefer
+conversational commands over remembering many CLI flags.
 
 ## Demo snapshots
 
