@@ -10,6 +10,19 @@ required resources for them.
 
 Repository: [github.com/sandy001-kki/Shukra](https://github.com/sandy001-kki/Shukra)
 
+## Completely new to Docker or Kubernetes?
+
+Read [docs/beginner-guide.md](docs/beginner-guide.md) first.
+
+That guide explains:
+
+- what Docker is
+- what Kubernetes is
+- what Helm does
+- what an Operator is
+- how Shukra fits into that stack
+- how to use the one-command bootstrap
+
 ## Why this project exists
 
 Running an application in Kubernetes normally requires several objects:
@@ -386,6 +399,7 @@ The repository contains:
 
 ## Documentation
 
+- [docs/beginner-guide.md](docs/beginner-guide.md)
 - [docs/getting-started.md](docs/getting-started.md)
 - [docs/api.md](docs/api.md)
 - [docs/architecture.md](docs/architecture.md)
