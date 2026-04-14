@@ -1,6 +1,8 @@
 # Shukra Operator
 
-![Shukra Operator banner](docs/assets/shukra-banner.svg)
+<p align="center">
+  <img src="docs/assets/shukla.png" alt="Shukra sage" width="720" />
+</p>
 
 Shukra Operator — One YAML. Complete Environment.
 
@@ -17,6 +19,21 @@ declares the desired environment once and Shukra continuously reconciles the
 required resources for them.
 
 Repository: [github.com/sandy001-kki/Shukra](https://github.com/sandy001-kki/Shukra)
+
+## About
+
+Shukra Operator is a production-grade Kubernetes Operator for teams that want a
+single, app-centric interface instead of maintaining many low-level manifests.
+You define one `AppEnvironment`, and Shukra reconciles the compute, networking,
+configuration, scaling, database workflow, backups, and security resources that
+environment needs.
+
+In simple terms, Shukra acts like the platform sage for your application:
+
+- you describe the environment once
+- Shukra creates and keeps the Kubernetes resources aligned
+- status, conditions, events, and metrics tell you what is happening
+- deletion is handled safely through finalizers instead of being left half-done
 
 ## Start here
 
