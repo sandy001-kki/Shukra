@@ -1,0 +1,45 @@
+name: Feature request
+description: Suggest an improvement to the operator, chart, docs, or CLI
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please describe the problem first, then the feature.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Operator API
+        - Reconciliation behavior
+        - Security and tenancy
+        - Helm chart
+        - CLI
+        - Docs and onboarding
+        - Release workflow
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: impact
+    attributes:
+      label: Who benefits and how?
+      description: Tell us whether this helps application developers, platform teams, operators, or contributors.

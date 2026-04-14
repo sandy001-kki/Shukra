@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a defect in the operator, chart, docs, or CLI
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please include enough detail for us to reproduce it safely.
+  - type: input
+    id: version
+    attributes:
+      label: Shukra version
+      description: Operator, chart, or CLI version
+      placeholder: 0.2.2
+    validations:
+      required: true
+  - type: input
+    id: kubernetes
+    attributes:
+      label: Kubernetes version
+      placeholder: v1.30.0
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - Operator controller
+        - Webhooks
+        - Helm chart
+        - CLI
+        - Docs
+        - Examples
+        - CI or release workflow
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem and the behavior you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Include YAML, commands, and namespace details when possible.
+      placeholder: |
+        1. Install with ...
+        2. Apply this AppEnvironment ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or status output
+      description: Paste sanitized logs, events, or `kubectl describe` output. Do not include secret values.
+      render: shell
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Anything else maintainers should know?

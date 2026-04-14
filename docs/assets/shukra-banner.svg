@@ -1,0 +1,60 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="82" y1="56" x2="1180" y2="604" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="0.55" stop-color="#0B3B3C"/>
+      <stop offset="1" stop-color="#14532D"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="382" y1="173" x2="813" y2="483" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#F97316"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="146" y1="124" x2="1134" y2="544" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="white" stop-opacity="0.03"/>
+    </linearGradient>
+    <filter id="blurShadow" x="299" y="90" width="445" height="445" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+      <feGaussianBlur stdDeviation="28" result="effect1_foregroundBlur"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" rx="36" fill="url(#bg)"/>
+  <circle cx="1102" cy="112" r="176" fill="#22C55E" fill-opacity="0.08"/>
+  <circle cx="171" cy="545" r="158" fill="#38BDF8" fill-opacity="0.08"/>
+  <rect x="64" y="64" width="1152" height="512" rx="28" fill="url(#glass)" stroke="rgba(255,255,255,0.12)"/>
+
+  <g filter="url(#blurShadow)">
+    <circle cx="521.5" cy="312.5" r="166.5" fill="#F59E0B" fill-opacity="0.12"/>
+  </g>
+
+  <g transform="translate(128 136)">
+    <rect x="0" y="12" width="220" height="220" rx="48" fill="#081018" stroke="#1F2937" stroke-width="2"/>
+    <path d="M110 38L178 77V155C178 198 149 236 110 252C71 236 42 198 42 155V77L110 38Z" fill="url(#accent)"/>
+    <path d="M110 74L145 94V136C145 160 131 183 110 195C89 183 75 160 75 136V94L110 74Z" fill="#111827" fill-opacity="0.32"/>
+    <path d="M110 91L134 105V132C134 148 125 163 110 171C95 163 86 148 86 132V105L110 91Z" fill="#F8FAFC"/>
+    <circle cx="110" cy="122" r="16" fill="#0F172A"/>
+    <path d="M126 197H238" stroke="#F59E0B" stroke-width="12" stroke-linecap="round"/>
+    <path d="M126 228H214" stroke="#FB923C" stroke-width="12" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(394 134)">
+    <text x="0" y="88" fill="#F8FAFC" font-size="78" font-family="Segoe UI, Arial, sans-serif" font-weight="700">Shukra Operator</text>
+    <text x="0" y="146" fill="#93C5FD" font-size="28" font-family="Segoe UI, Arial, sans-serif" font-weight="600">One YAML. Complete Environment.</text>
+    <text x="0" y="216" fill="#E2E8F0" font-size="30" font-family="Segoe UI, Arial, sans-serif" font-weight="500">Full-stack application environments from a single AppEnvironment resource.</text>
+    <text x="0" y="268" fill="#CBD5E1" font-size="26" font-family="Segoe UI, Arial, sans-serif">Deployments, services, ingress, autoscaling, migration, backup, restore, and security.</text>
+
+    <rect x="0" y="324" width="272" height="64" rx="18" fill="#0F172A" stroke="#334155"/>
+    <circle cx="34" cy="356" r="8" fill="#22C55E"/>
+    <text x="56" y="365" fill="#F8FAFC" font-size="24" font-family="Segoe UI, Arial, sans-serif">Production-ready operator</text>
+
+    <rect x="292" y="324" width="222" height="64" rx="18" fill="#0F172A" stroke="#334155"/>
+    <circle cx="326" cy="356" r="8" fill="#38BDF8"/>
+    <text x="348" y="365" fill="#F8FAFC" font-size="24" font-family="Segoe UI, Arial, sans-serif">CLI companion</text>
+
+    <rect x="534" y="324" width="250" height="64" rx="18" fill="#0F172A" stroke="#334155"/>
+    <circle cx="568" cy="356" r="8" fill="#F59E0B"/>
+    <text x="590" y="365" fill="#F8FAFC" font-size="24" font-family="Segoe UI, Arial, sans-serif">OCI chart + GHCR</text>
+  </g>
+</svg>
