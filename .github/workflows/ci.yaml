@@ -26,6 +26,7 @@ jobs:
       - name: Add Go tool binaries to PATH
         run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - run: make manifests generate
+      - run: go build ./cmd/shukra
       - run: go vet ./...
       - run: golangci-lint run
       - run: make test

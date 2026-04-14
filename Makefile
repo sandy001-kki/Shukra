@@ -3,7 +3,8 @@
 # and on workstations without needing prior repository-specific context.
 
 IMG             ?= ghcr.io/sandy001-kki/shukra-operator:latest
-CHART_VERSION   ?= 0.1.0
+CLI_BIN         ?= shukra
+CHART_VERSION   ?= 0.2.0
 ENVTEST_VERSION ?= release-0.17
 KUSTOMIZE       ?= kustomize
 CONTROLLER_GEN  ?= controller-gen
@@ -35,6 +36,10 @@ uninstall:
 .PHONY: run
 run:
 	go run ./cmd/main.go --leader-elect=true --max-concurrent-reconciles=5
+
+.PHONY: cli-build
+cli-build:
+	go build -o bin/$(CLI_BIN) ./cmd/shukra
 
 .PHONY: test
 test:

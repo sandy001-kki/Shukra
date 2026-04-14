@@ -1,5 +1,6 @@
 # This file keeps local build outputs and OS-specific noise out of the source repository.
 *.tgz
 *.log
+*.exe
 .DS_Store
 Thumbs.db

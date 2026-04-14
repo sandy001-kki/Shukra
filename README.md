@@ -165,6 +165,9 @@ If you want a more beginner-friendly walkthrough, read
 If you want a structured progression from total beginner to contributor, read
 [docs/learning-path.md](docs/learning-path.md).
 
+If you want the command-line interface guide, read
+[docs/cli.md](docs/cli.md).
+
 ## Demo snapshots
 
 Live cluster snapshots generated from a working local Shukra run:
@@ -206,13 +209,19 @@ There is also a matching Make target:
 make bootstrap-local
 ```
 
+You can run the same flow through the CLI:
+
+```powershell
+shukra bootstrap local
+```
+
 ## Install from OCI Helm chart
 
 If a published chart is available in GHCR, install it directly:
 
 ```bash
 helm install shukra-operator oci://ghcr.io/sandy001-kki/charts/shukra-operator \
-  --version 0.1.2 \
+  --version 0.2.0 \
   -n shukra-system \
   --create-namespace
 ```
@@ -220,8 +229,37 @@ helm install shukra-operator oci://ghcr.io/sandy001-kki/charts/shukra-operator \
 The matching published controller image for that release is:
 
 ```text
-ghcr.io/sandy001-kki/shukra-operator:0.1.2
+ghcr.io/sandy001-kki/shukra-operator:0.2.0
 ```
+
+The GitHub release also includes standalone CLI binaries for Linux, Windows,
+and macOS.
+
+## Shukra CLI
+
+Shukra ships with a companion CLI that helps users install the operator,
+generate starter manifests, inspect environments, and trigger common lifecycle
+actions.
+
+Build it locally:
+
+```bash
+make cli-build
+```
+
+Common commands:
+
+```bash
+shukra version
+shukra install --operator-namespace shukra-system
+shukra env init demo-app --image nginx:1.27 --output demo-app.yaml
+shukra env apply -f demo-app.yaml
+shukra env status demo-app -n default
+shukra env pause demo-app -n default
+shukra env resume demo-app -n default
+```
+
+For the full command guide, see [docs/cli.md](docs/cli.md).
 
 ## First user workflow
 
@@ -421,9 +459,9 @@ Git tags like `v0.1.0` drive:
 The git tag keeps its leading `v`, but published OCI artifact versions do not.
 For example:
 
-- Git tag: `v0.1.2`
-- GHCR image: `ghcr.io/sandy001-kki/shukra-operator:0.1.2`
-- OCI chart version: `0.1.2`
+- Git tag: `v0.2.0`
+- GHCR image: `ghcr.io/sandy001-kki/shukra-operator:0.2.0`
+- OCI chart version: `0.2.0`
 
 Charts are published as OCI artifacts to:
 
@@ -443,6 +481,7 @@ The repository contains:
 - [docs/beginner-guide.md](docs/beginner-guide.md)
 - [docs/getting-started.md](docs/getting-started.md)
 - [docs/learning-path.md](docs/learning-path.md)
+- [docs/cli.md](docs/cli.md)
 - [docs/migration-restore-walkthrough.md](docs/migration-restore-walkthrough.md)
 - [docs/api.md](docs/api.md)
 - [docs/architecture.md](docs/architecture.md)

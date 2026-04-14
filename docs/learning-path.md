@@ -86,6 +86,7 @@ instead of copying the examples unchanged.
 Goal:
 
 - try common platform features one by one
+- start using the CLI for common lifecycle actions
 
 Recommended order:
 
@@ -104,6 +105,14 @@ Why this order:
 - `ingress` adds external routing
 - `migration` adds database workflow
 - `restore` adds recovery workflow
+
+Helpful CLI commands during this stage:
+
+- `shukra env status <name> -n default`
+- `shukra env pause <name> -n default`
+- `shukra env resume <name> -n default`
+- `shukra env migrate <name> -n default --migration-id ...`
+- `shukra env restore <name> -n default --trigger-nonce ... --image ... --source ...`
 
 ## Stage 5: Understand production rules
 
@@ -153,6 +162,7 @@ Goal:
 Read:
 
 - `CONTRIBUTING.md`
+- `docs/cli.md`
 - `.github/workflows/ci.yaml`
 - `.github/workflows/release.yaml`
 

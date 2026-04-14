@@ -1,7 +1,7 @@
 # This Dockerfile builds the controller manager with a multi-stage pipeline and
 # runs it as a non-root distroless image for production-safe deployment.
 
-FROM golang:1.21 as builder
+FROM golang:1.21 AS builder
 WORKDIR /workspace
 COPY go.mod go.sum ./
 RUN go mod download
