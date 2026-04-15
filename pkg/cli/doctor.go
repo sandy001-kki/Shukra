@@ -5,6 +5,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -27,11 +28,24 @@ type doctorResult struct {
 }
 
 func newDoctorCommand(opts *RootOptions) *cobra.Command {
-	return &cobra.Command{
+	var output string
+
+	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Check whether the local Shukra environment is healthy",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			results := runDoctorChecks(opts)
+			if output == "json" {
+				payload, err := json.MarshalIndent(results, "", "  ")
+				if err != nil {
+					return err
+				}
+				fmt.Fprintln(cmd.OutOrStdout(), string(payload))
+				if hasDoctorFailure(results) {
+					return fmt.Errorf("one or more doctor checks failed")
+				}
+				return nil
+			}
 
 			printTitle(cmd.OutOrStdout(), "Shukra Doctor")
 			for _, result := range results {
@@ -45,6 +59,8 @@ func newDoctorCommand(opts *RootOptions) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVarP(&output, "output", "o", "summary", "Output format: summary or json.")
+	return cmd
 }
 
 func runDoctorChecks(opts *RootOptions) []doctorResult {

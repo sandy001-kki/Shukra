@@ -50,10 +50,20 @@ show resources for basic-app
 show operator status
 ```
 
+Or use the explicit CLI surfaces directly:
+
+```powershell
+go run .\cmd\shukra doctor -o json
+go run .\cmd\shukra diagnose env basic-app -n default
+go run .\cmd\shukra ask "How do I install Shukra on my own cluster?"
+go run .\cmd\shukra completion powershell
+```
+
 If you want a full environment health check before anything else, run:
 
 ```powershell
 go run .\cmd\shukra doctor
+go run .\cmd\shukra doctor -o json
 ```
 
 If you already have your own Kubernetes cluster, skip the local bootstrap flow
@@ -350,6 +360,13 @@ What works today:
 For non-local clusters, `shukra doctor` treats Docker as optional and focuses on
 cluster reachability, CRDs, operator Pods, and cert-manager state.
 
+If you prefer explicit commands over chat, Shukra also includes:
+
+- `shukra diagnose env <name>` for direct environment diagnosis
+- `shukra diagnose operator` for operator pod inspection
+- `shukra ask "<question>"` for grounded answers from local Shukra docs
+- `shukra completion powershell` for PowerShell tab completion setup
+
 ## Shukra AI roadmap
 
 Shukra can evolve into a real AI-assisted operator workflow, but there is an
@@ -471,6 +488,7 @@ Common areas to tune:
 Read the full values guide here:
 
 - [docs/helm-values.md](docs/helm-values.md)
+- [charts/shukra-operator/values-production.yaml](charts/shukra-operator/values-production.yaml)
 
 ## Shukra CLI
 
@@ -489,6 +507,10 @@ Common commands:
 ```bash
 shukra version
 shukra install --operator-namespace shukra-system
+shukra doctor --output json
+shukra diagnose env demo-app -n default
+shukra diagnose operator
+shukra ask "How do I install Shukra on EKS?"
 shukra env init demo-app --image nginx:1.27 --output demo-app.yaml
 shukra env apply -f demo-app.yaml
 shukra env status demo-app -n default
@@ -597,6 +619,8 @@ Key sections include:
   App with backup and restore flow
 - [examples/paused.yaml](examples/paused.yaml)
   App with reconciliation paused
+- [examples/production-web.yaml](examples/production-web.yaml)
+  Production-oriented web service example with ingress, autoscaling, backup, and PDB
 
 ## How users observe their environment
 
@@ -719,6 +743,12 @@ The repository contains:
 - [docs/getting-started.md](docs/getting-started.md)
 - [docs/bring-your-own-cluster.md](docs/bring-your-own-cluster.md)
 - [docs/helm-values.md](docs/helm-values.md)
+- [docs/cloud-eks.md](docs/cloud-eks.md)
+- [docs/cloud-gke.md](docs/cloud-gke.md)
+- [docs/cloud-aks.md](docs/cloud-aks.md)
+- [docs/gitops-argocd.md](docs/gitops-argocd.md)
+- [docs/gitops-flux.md](docs/gitops-flux.md)
+- [docs/observability.md](docs/observability.md)
 - [docs/learning-path.md](docs/learning-path.md)
 - [docs/cli.md](docs/cli.md)
 - [docs/ai-roadmap.md](docs/ai-roadmap.md)
@@ -740,6 +770,16 @@ requirements, and test expectations.
 
 See [SECURITY.md](SECURITY.md) for private vulnerability reporting guidance and
 supported release expectations.
+
+## Support
+
+See [SUPPORT.md](SUPPORT.md) for the recommended support path, issue-routing
+guidance, and what information to include when asking for help.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release highlights and user-visible
+updates.
 
 ## Roadmap
 

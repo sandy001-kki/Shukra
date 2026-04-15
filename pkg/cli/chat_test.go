@@ -126,3 +126,23 @@ func TestConditionStatus(t *testing.T) {
 		t.Fatalf("expected True, got %q", got)
 	}
 }
+
+func TestUniqueTerms(t *testing.T) {
+	terms := uniqueTerms("How do I install Shukra on EKS and install it safely?")
+	if len(terms) == 0 {
+		t.Fatal("expected non-empty terms")
+	}
+}
+
+func TestAnswerQuestion(t *testing.T) {
+	response, err := answerQuestion("How do I install Shukra on my own cluster?", 2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if response.Question == "" || response.Summary == "" {
+		t.Fatalf("expected populated response: %#v", response)
+	}
+	if len(response.Sources) == 0 {
+		t.Fatalf("expected at least one source: %#v", response)
+	}
+}

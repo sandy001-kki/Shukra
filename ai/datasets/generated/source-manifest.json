@@ -1,77 +1,77 @@
 [
     {
         "path":  "README.md",
-        "bytes":  18933,
-        "extractedAt":  "2026-04-15T14:11:59.5497312+05:30"
+        "bytes":  22997,
+        "extractedAt":  "2026-04-15T16:54:16.9466373+05:30"
     },
     {
         "path":  "docs\\beginner-guide.md",
         "bytes":  6182,
-        "extractedAt":  "2026-04-15T14:11:59.5702653+05:30"
+        "extractedAt":  "2026-04-15T16:54:16.9746488+05:30"
     },
     {
         "path":  "docs\\getting-started.md",
-        "bytes":  1937,
-        "extractedAt":  "2026-04-15T14:11:59.5712643+05:30"
+        "bytes":  2491,
+        "extractedAt":  "2026-04-15T16:54:16.9796506+05:30"
     },
     {
         "path":  "docs\\learning-path.md",
         "bytes":  3701,
-        "extractedAt":  "2026-04-15T14:11:59.5732683+05:30"
+        "extractedAt":  "2026-04-15T16:54:16.9955688+05:30"
     },
     {
         "path":  "docs\\cli.md",
-        "bytes":  3298,
-        "extractedAt":  "2026-04-15T14:11:59.5752673+05:30"
+        "bytes":  5299,
+        "extractedAt":  "2026-04-15T16:54:16.9985716+05:30"
     },
     {
         "path":  "docs\\architecture.md",
         "bytes":  2751,
-        "extractedAt":  "2026-04-15T14:11:59.5762651+05:30"
+        "extractedAt":  "2026-04-15T16:54:17.0015742+05:30"
     },
     {
         "path":  "docs\\tenancy.md",
         "bytes":  1544,
-        "extractedAt":  "2026-04-15T14:11:59.5792623+05:30"
+        "extractedAt":  "2026-04-15T16:54:17.0035716+05:30"
     },
     {
         "path":  "docs\\troubleshooting.md",
-        "bytes":  1929,
-        "extractedAt":  "2026-04-15T14:11:59.5822712+05:30"
+        "bytes":  2960,
+        "extractedAt":  "2026-04-15T16:54:17.0065746+05:30"
     },
     {
         "path":  "docs\\migration-restore-walkthrough.md",
         "bytes":  3468,
-        "extractedAt":  "2026-04-15T14:11:59.5852813+05:30"
+        "extractedAt":  "2026-04-15T16:54:17.0086222+05:30"
     },
     {
         "path":  "examples\\basic.yaml",
         "bytes":  619,
-        "extractedAt":  "2026-04-15T14:11:59.5872737+05:30"
+        "extractedAt":  "2026-04-15T16:54:17.0125708+05:30"
     },
     {
         "path":  "examples\\ingress.yaml",
         "bytes":  542,
-        "extractedAt":  "2026-04-15T14:11:59.5902791+05:30"
+        "extractedAt":  "2026-04-15T16:54:17.0145756+05:30"
     },
     {
         "path":  "examples\\autoscaling.yaml",
         "bytes":  552,
-        "extractedAt":  "2026-04-15T14:11:59.5922740+05:30"
+        "extractedAt":  "2026-04-15T16:54:17.0165707+05:30"
     },
     {
         "path":  "examples\\migration.yaml",
         "bytes":  718,
-        "extractedAt":  "2026-04-15T14:11:59.5932795+05:30"
+        "extractedAt":  "2026-04-15T16:54:17.0185692+05:30"
     },
     {
         "path":  "examples\\restore.yaml",
         "bytes":  913,
-        "extractedAt":  "2026-04-15T14:11:59.5942784+05:30"
+        "extractedAt":  "2026-04-15T16:54:17.0215671+05:30"
     },
     {
         "path":  "examples\\paused.yaml",
         "bytes":  611,
-        "extractedAt":  "2026-04-15T14:11:59.5962765+05:30"
+        "extractedAt":  "2026-04-15T16:54:17.0225684+05:30"
     }
 ]

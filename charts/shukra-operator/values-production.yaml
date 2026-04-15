@@ -1,0 +1,41 @@
+# Example production values for the Shukra Operator chart.
+# This file is intentionally conservative and should be adapted to your
+# organization, issuer, watch scope, and observability standards.
+image:
+  repository: ghcr.io/sandy001-kki/shukra-operator
+  tag: 0.2.3
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+leaderElection:
+  enabled: true
+  namespace: shukra-system
+
+watchNamespace: ""
+maxConcurrentReconciles: 10
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+
+certmanager:
+  enabled: true
+  issuerKind: ClusterIssuer
+  issuerName: platform-webhook-issuer
+
+metrics:
+  enabled: true
+  port: 8443
+
+serviceAccount:
+  create: true
+  name: shukra-operator

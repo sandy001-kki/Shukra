@@ -40,11 +40,14 @@ memorizing raw kubectl and helm commands.`,
 	rootCmd.AddCommand(
 		newVersionCommand(version, commit, date),
 		newDoctorCommand(opts),
+		newDiagnoseCommand(opts),
 		newInstallCommand(opts),
 		newUninstallCommand(opts),
 		newBootstrapCommand(),
+		newAskCommand(),
 		newChatCommand(opts, version, commit, date),
 		newEnvCommand(opts),
+		newCompletionCommand(rootCmd),
 	)
 
 	return rootCmd.Execute()

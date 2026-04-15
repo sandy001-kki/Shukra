@@ -56,6 +56,7 @@ Use the doctor command to check whether the local Shukra environment is ready.
 
 ```powershell
 shukra doctor
+shukra doctor --output json
 ```
 
 It checks:
@@ -72,6 +73,54 @@ It checks:
 
 On existing remote clusters, Docker is optional. `shukra doctor` treats Docker
 as required only for local image-build and kind-style workflows.
+
+The JSON mode is useful for CI pipelines, scripted environment checks, and
+bring-your-own-cluster readiness validation before install or upgrade work.
+
+## Diagnose commands
+
+If you prefer explicit commands over chat phrasing, use the diagnose surface:
+
+```powershell
+shukra diagnose env basic-app -n default
+shukra diagnose operator
+```
+
+`diagnose env` gives a focused summary of phase, readiness, paused state,
+failure count, and next checks. `diagnose operator` shows the current operator
+Pod health and placement.
+
+## Ask command
+
+Use `shukra ask` for grounded answers from the local Shukra documentation and
+examples when you want help without opening the full chat interface.
+
+```powershell
+shukra ask "How do I install Shukra on my own cluster?"
+shukra ask "How do I install Shukra on EKS?" --top 5
+shukra ask "How do backups work?" --output json
+```
+
+This mode does not depend on an API key or external model. It searches the repo
+docs and examples and returns the best grounded snippets plus the matching
+source files.
+
+## Shell completion
+
+The CLI can generate shell completions, including PowerShell completions for
+Windows users:
+
+```powershell
+shukra completion powershell
+```
+
+Typical PowerShell setup:
+
+```powershell
+shukra completion powershell | Out-String | Invoke-Expression
+```
+
+For persistent local setup, add that line to your PowerShell profile.
 
 ## Core commands
 
@@ -91,6 +140,25 @@ Install the operator from the published OCI chart:
 
 ```bash
 shukra install --oci --chart-version 0.2.3 --operator-namespace shukra-system
+```
+
+Run machine-readable health checks:
+
+```bash
+shukra doctor --output json
+```
+
+Run direct diagnosis commands:
+
+```bash
+shukra diagnose env basic-app -n default
+shukra diagnose operator
+```
+
+Ask grounded questions from local docs:
+
+```bash
+shukra ask "How do I install Shukra on AKS?"
 ```
 
 Bootstrap a local Windows development cluster:
