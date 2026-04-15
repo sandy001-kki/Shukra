@@ -4,7 +4,7 @@
 
 IMG             ?= ghcr.io/sandy001-kki/shukra-operator:latest
 CLI_BIN         ?= shukra
-CHART_VERSION   ?= 0.2.2
+CHART_VERSION   ?= 0.2.3
 ENVTEST_VERSION ?= release-0.17
 KUSTOMIZE       ?= kustomize
 CONTROLLER_GEN  ?= controller-gen

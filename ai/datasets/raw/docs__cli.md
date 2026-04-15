@@ -47,8 +47,28 @@ Example phrases:
 - `pause basic-app`
 - `resume basic-app`
 - `delete basic-app`
-- `install operator from oci version 0.2.2`
+- `install operator from oci version 0.2.3`
 - `bootstrap local`
+
+## Doctor command
+
+Use the doctor command to check whether the local Shukra environment is ready.
+
+```powershell
+shukra doctor
+```
+
+It checks:
+
+- Docker CLI presence
+- Docker engine responsiveness
+- `kubectl` availability
+- `helm` availability
+- kubeconfig loading
+- Kubernetes API reachability
+- AppEnvironment API availability
+- operator pod readiness
+- cert-manager pod readiness
 
 ## Core commands
 
@@ -67,7 +87,7 @@ shukra install --operator-namespace shukra-system
 Install the operator from the published OCI chart:
 
 ```bash
-shukra install --oci --chart-version 0.2.2 --operator-namespace shukra-system
+shukra install --oci --chart-version 0.2.3 --operator-namespace shukra-system
 ```
 
 Bootstrap a local Windows development cluster:

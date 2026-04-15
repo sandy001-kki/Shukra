@@ -20,6 +20,33 @@ required resources for them.
 
 Repository: [github.com/sandy001-kki/Shukra](https://github.com/sandy001-kki/Shukra)
 
+## Use it now
+
+If you want the shortest path from clone to a working local Shukra environment:
+
+```powershell
+git clone https://github.com/sandy001-kki/Shukra.git
+cd Shukra
+powershell -ExecutionPolicy Bypass -File .\hack\bootstrap-local.ps1
+go run .\cmd\shukra chat
+```
+
+Then try:
+
+```text
+status basic-app
+list environments
+diagnose basic-app
+show resources for basic-app
+show operator status
+```
+
+If you want a full environment health check before anything else, run:
+
+```powershell
+go run .\cmd\shukra doctor
+```
+
 ## About
 
 Shukra Operator is a production-grade Kubernetes Operator for teams that want a
@@ -242,6 +269,7 @@ status basic-app
 list environments
 show resources for basic-app
 diagnose basic-app
+show operator status
 apply examples/basic.yaml
 show operator logs
 pause basic-app
@@ -265,6 +293,20 @@ It also supports operator-aware inspection flows such as:
 - showing child resources
 - diagnosing environment health
 - showing operator pod status
+
+There is also a deterministic health-check command for the local toolchain and
+cluster:
+
+```powershell
+go run .\cmd\shukra doctor
+```
+
+What works today:
+
+- English-first control commands in PowerShell
+- live status and diagnosis against the cluster
+- operator install/bootstrap flows
+- safe lifecycle actions such as apply, pause, resume, delete, migrate, and restore
 
 ## Shukra AI roadmap
 
@@ -349,7 +391,7 @@ If a published chart is available in GHCR, install it directly:
 
 ```bash
 helm install shukra-operator oci://ghcr.io/sandy001-kki/charts/shukra-operator \
-  --version 0.2.2 \
+  --version 0.2.3 \
   -n shukra-system \
   --create-namespace
 ```
@@ -357,7 +399,7 @@ helm install shukra-operator oci://ghcr.io/sandy001-kki/charts/shukra-operator \
 The matching published controller image for that release is:
 
 ```text
-ghcr.io/sandy001-kki/shukra-operator:0.2.2
+ghcr.io/sandy001-kki/shukra-operator:0.2.3
 ```
 
 The GitHub release also includes standalone CLI binaries for Linux, Windows,
@@ -587,9 +629,9 @@ Git tags like `v0.1.0` drive:
 The git tag keeps its leading `v`, but published OCI artifact versions do not.
 For example:
 
-- Git tag: `v0.2.2`
-- GHCR image: `ghcr.io/sandy001-kki/shukra-operator:0.2.2`
-- OCI chart version: `0.2.2`
+- Git tag: `v0.2.3`
+- GHCR image: `ghcr.io/sandy001-kki/shukra-operator:0.2.3`
+- OCI chart version: `0.2.3`
 
 Charts are published as OCI artifacts to:
 

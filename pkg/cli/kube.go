@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -16,9 +17,7 @@ import (
 	appsv1beta1 "github.com/sandy001-kki/Shukra/api/v1beta1"
 )
 
-func buildClient(ctx context.Context, opts *RootOptions) (ctrlclient.Client, *runtime.Scheme, error) {
-	_ = ctx
-
+func buildRESTConfig(opts *RootOptions) (*rest.Config, error) {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	loadingRules.ExplicitPath = opts.Kubeconfig
 	configOverrides := &clientcmd.ConfigOverrides{}
@@ -28,7 +27,17 @@ func buildClient(ctx context.Context, opts *RootOptions) (ctrlclient.Client, *ru
 
 	restConfig, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides).ClientConfig()
 	if err != nil {
-		return nil, nil, fmt.Errorf("build kube config: %w", err)
+		return nil, fmt.Errorf("build kube config: %w", err)
+	}
+	return restConfig, nil
+}
+
+func buildClient(ctx context.Context, opts *RootOptions) (ctrlclient.Client, *runtime.Scheme, error) {
+	_ = ctx
+
+	restConfig, err := buildRESTConfig(opts)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	scheme := runtime.NewScheme()

@@ -13,7 +13,7 @@ body:
     attributes:
       label: Shukra version
       description: Operator, chart, or CLI version
-      placeholder: 0.2.2
+      placeholder: 0.2.3
     validations:
       required: true
   - type: input

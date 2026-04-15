@@ -59,7 +59,7 @@ You can type plain English commands such as:
   diagnose basic-app
   show resources for basic-app
   apply examples/basic.yaml
-  install operator from oci version 0.2.2
+  install operator from oci version 0.2.3
   show operator logs
   pause basic-app
   resume basic-app
@@ -384,7 +384,7 @@ func printChatHelp(out io.Writer) {
 	printNote(out, "-", "resume basic-app")
 	printNote(out, "-", "delete basic-app")
 	printNote(out, "-", "show operator logs")
-	printNote(out, "-", "install operator from oci version 0.2.2")
+	printNote(out, "-", "install operator from oci version 0.2.3")
 	printNote(out, "-", "bootstrap local")
 	printNote(out, "-", "quit")
 }
