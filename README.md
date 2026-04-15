@@ -20,6 +20,27 @@ required resources for them.
 
 Repository: [github.com/sandy001-kki/Shukra](https://github.com/sandy001-kki/Shukra)
 
+## Use it now
+
+If you want the shortest path from clone to a working local Shukra environment:
+
+```powershell
+git clone https://github.com/sandy001-kki/Shukra.git
+cd Shukra
+powershell -ExecutionPolicy Bypass -File .\hack\bootstrap-local.ps1
+go run .\cmd\shukra chat
+```
+
+Then try:
+
+```text
+status basic-app
+list environments
+diagnose basic-app
+show resources for basic-app
+show operator status
+```
+
 ## About
 
 Shukra Operator is a production-grade Kubernetes Operator for teams that want a
@@ -265,6 +286,13 @@ It also supports operator-aware inspection flows such as:
 - showing child resources
 - diagnosing environment health
 - showing operator pod status
+
+What works today:
+
+- English-first control commands in PowerShell
+- live status and diagnosis against the cluster
+- operator install/bootstrap flows
+- safe lifecycle actions such as apply, pause, resume, delete, migrate, and restore
 
 ## Shukra AI roadmap
 
