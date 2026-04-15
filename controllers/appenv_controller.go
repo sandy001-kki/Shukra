@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -73,6 +74,10 @@ type permanentError struct{ err error }
 
 func (e permanentError) Error() string { return e.err.Error() }
 
+func retryOnConflict(fn func() error) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, fn)
+}
+
 func (r *AppEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	start := time.Now()
 	result := "success"
@@ -113,7 +118,7 @@ func (r *AppEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		appEnv.Status.Phase = appsv1beta1.PhasePaused
 		appEnv.Status.LastSuccessfulReconcileTime = &now
 		eventRecorder.RecordPaused(appEnv)
-		return ctrl.Result{}, r.Status().Update(ctx, appEnv)
+		return ctrl.Result{}, r.persistStatus(ctx, appEnv)
 	}
 	statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionPaused, metav1.ConditionFalse, "Running", "Reconciliation active", appEnv.Generation)
 	eventRecorder.RecordUnpaused(appEnv)
@@ -125,7 +130,7 @@ func (r *AppEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		appEnv.Status.FailureCount++
 		result = "error"
 		shukrametrics.ReconcileFailures.WithLabelValues(appEnv.Namespace, "validation").Inc()
-		_ = r.Status().Update(ctx, appEnv)
+		_ = r.persistStatus(ctx, appEnv)
 		return ctrl.Result{}, permanentError{err: err}
 	}
 	statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionSpecValid, metav1.ConditionTrue, "Validated", "Specification is valid", appEnv.Generation)
@@ -150,24 +155,38 @@ func (r *AppEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionReady, metav1.ConditionFalse, "PermanentError", err.Error(), appEnv.Generation)
 				appEnv.Status.Phase = appsv1beta1.PhaseFailed
 				appEnv.Status.LastError = err.Error()
-				_ = r.Status().Update(ctx, appEnv)
+				_ = r.persistStatus(ctx, appEnv)
 				return ctrl.Result{}, nil
 			}
 			result = "error"
 			appEnv.Status.FailureCount++
 			appEnv.Status.LastError = err.Error()
 			statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionReady, metav1.ConditionFalse, "TransientError", err.Error(), appEnv.Generation)
-			_ = r.Status().Update(ctx, appEnv)
+			_ = r.persistStatus(ctx, appEnv)
 			shukrametrics.ReconcileFailures.WithLabelValues(appEnv.Namespace, "transient").Inc()
-			return ctrl.Result{Requeue: true}, err
+			return ctrl.Result{}, err
 		}
 	}
 
 	appEnv.Status.LastError = ""
+	appEnv.Status.FailureCount = 0
 	statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionReady, metav1.ConditionTrue, "Ready", "All resources reconciled", appEnv.Generation)
 	appEnv.Status.Phase = statusutil.ComputePhase(appEnv.Status.Conditions, false, appEnv.Spec.Restore.Enabled && appEnv.Status.LastProcessedRestoreNonce != appEnv.Spec.Restore.TriggerNonce)
 	appEnv.Status.LastSuccessfulReconcileTime = &now
-	return ctrl.Result{}, r.Status().Update(ctx, appEnv)
+	return ctrl.Result{}, r.persistStatus(ctx, appEnv)
+}
+
+func (r *AppEnvironmentReconciler) persistStatus(ctx context.Context, appEnv *appsv1beta1.AppEnvironment) error {
+	desired := appEnv.DeepCopy().Status
+	key := types.NamespacedName{Name: appEnv.Name, Namespace: appEnv.Namespace}
+	return retryOnConflict(func() error {
+		current := &appsv1beta1.AppEnvironment{}
+		if err := r.Get(ctx, key, current); err != nil {
+			return err
+		}
+		current.Status = desired
+		return r.Status().Update(ctx, current)
+	})
 }
 
 func (r *AppEnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -257,7 +276,19 @@ func (r *AppEnvironmentReconciler) reconcileConfigMap(ctx context.Context, appEn
 		return controllerutil.SetControllerReference(appEnv, cm, r.Scheme)
 	})
 	if err != nil {
-		return err
+		err = retryOnConflict(func() error {
+			_, retryErr := controllerutil.CreateOrUpdate(ctx, r.Client, cm, func() error {
+				desired := resources.ConfigMap(appEnv)
+				cm.Labels = desired.Labels
+				cm.Annotations = desired.Annotations
+				cm.Data = desired.Data
+				return controllerutil.SetControllerReference(appEnv, cm, r.Scheme)
+			})
+			return retryErr
+		})
+		if err != nil {
+			return err
+		}
 	}
 	appEnv.Status.ChildResources.ConfigMapName = cm.Name
 	statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionConfigReady, metav1.ConditionTrue, "Configured", "ConfigMap reconciled", appEnv.Generation)
@@ -283,7 +314,19 @@ func (r *AppEnvironmentReconciler) reconcileService(ctx context.Context, appEnv 
 		return controllerutil.SetControllerReference(appEnv, svc, r.Scheme)
 	})
 	if err != nil {
-		return err
+		err = retryOnConflict(func() error {
+			_, retryErr := controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
+				desired := resources.Service(appEnv)
+				svc.Labels = desired.Labels
+				svc.Annotations = desired.Annotations
+				svc.Spec = desired.Spec
+				return controllerutil.SetControllerReference(appEnv, svc, r.Scheme)
+			})
+			return retryErr
+		})
+		if err != nil {
+			return err
+		}
 	}
 	appEnv.Status.ChildResources.ServiceName = svc.Name
 	statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionServiceReady, metav1.ConditionTrue, "Ready", "Service reconciled", appEnv.Generation)
@@ -300,7 +343,18 @@ func (r *AppEnvironmentReconciler) reconcileDeployment(ctx context.Context, appE
 		return controllerutil.SetControllerReference(appEnv, deployment, r.Scheme)
 	})
 	if err != nil {
-		return err
+		err = retryOnConflict(func() error {
+			_, retryErr := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+				desired := resources.Deployment(appEnv)
+				deployment.Labels = desired.Labels
+				deployment.Spec = desired.Spec
+				return controllerutil.SetControllerReference(appEnv, deployment, r.Scheme)
+			})
+			return retryErr
+		})
+		if err != nil {
+			return err
+		}
 	}
 	appEnv.Status.ChildResources.DeploymentName = deployment.Name
 	statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionDeploymentReady, metav1.ConditionTrue, "Ready", "Deployment reconciled", appEnv.Generation)
@@ -320,7 +374,18 @@ func (r *AppEnvironmentReconciler) reconcileHPA(ctx context.Context, appEnv *app
 		return controllerutil.SetControllerReference(appEnv, hpa, r.Scheme)
 	})
 	if err != nil {
-		return err
+		err = retryOnConflict(func() error {
+			_, retryErr := controllerutil.CreateOrUpdate(ctx, r.Client, hpa, func() error {
+				desired := resources.HPA(appEnv)
+				hpa.Labels = desired.Labels
+				hpa.Spec = desired.Spec
+				return controllerutil.SetControllerReference(appEnv, hpa, r.Scheme)
+			})
+			return retryErr
+		})
+		if err != nil {
+			return err
+		}
 	}
 	appEnv.Status.ChildResources.HPAName = hpa.Name
 	recorder.RecordChildReconciled(appEnv, "HorizontalPodAutoscaler")
@@ -372,7 +437,15 @@ func (r *AppEnvironmentReconciler) reconcileRestoreJob(ctx context.Context, appE
 		return controllerutil.SetControllerReference(appEnv, job, r.Scheme)
 	})
 	if err != nil {
-		return err
+		err = retryOnConflict(func() error {
+			_, retryErr := controllerutil.CreateOrUpdate(ctx, r.Client, job, func() error {
+				return controllerutil.SetControllerReference(appEnv, job, r.Scheme)
+			})
+			return retryErr
+		})
+		if err != nil {
+			return err
+		}
 	}
 	appEnv.Status.Phase = appsv1beta1.PhaseRestoring
 	appEnv.Status.LastProcessedRestoreNonce = appEnv.Spec.Restore.TriggerNonce
@@ -398,7 +471,19 @@ func (r *AppEnvironmentReconciler) reconcileIngress(ctx context.Context, appEnv 
 		return controllerutil.SetControllerReference(appEnv, ingress, r.Scheme)
 	})
 	if err != nil {
-		return err
+		err = retryOnConflict(func() error {
+			_, retryErr := controllerutil.CreateOrUpdate(ctx, r.Client, ingress, func() error {
+				desired := resources.Ingress(appEnv)
+				ingress.Labels = desired.Labels
+				ingress.Annotations = desired.Annotations
+				ingress.Spec = desired.Spec
+				return controllerutil.SetControllerReference(appEnv, ingress, r.Scheme)
+			})
+			return retryErr
+		})
+		if err != nil {
+			return err
+		}
 	}
 	appEnv.Status.ChildResources.IngressName = ingress.Name
 	appEnv.Status.URL = "https://" + appEnv.Spec.Ingress.Host + appEnv.Spec.Ingress.Path
@@ -419,7 +504,18 @@ func (r *AppEnvironmentReconciler) reconcileNetworkPolicy(ctx context.Context, a
 		return controllerutil.SetControllerReference(appEnv, netpol, r.Scheme)
 	})
 	if err != nil {
-		return err
+		err = retryOnConflict(func() error {
+			_, retryErr := controllerutil.CreateOrUpdate(ctx, r.Client, netpol, func() error {
+				desired := resources.NetworkPolicy(appEnv)
+				netpol.Labels = desired.Labels
+				netpol.Spec = desired.Spec
+				return controllerutil.SetControllerReference(appEnv, netpol, r.Scheme)
+			})
+			return retryErr
+		})
+		if err != nil {
+			return err
+		}
 	}
 	appEnv.Status.ChildResources.NetworkPolicyName = netpol.Name
 	recorder.RecordChildReconciled(appEnv, "NetworkPolicy")
@@ -444,7 +540,21 @@ func (r *AppEnvironmentReconciler) reconcilePDB(ctx context.Context, appEnv *app
 		return controllerutil.SetControllerReference(appEnv, pdb, r.Scheme)
 	})
 	if err != nil {
-		return err
+		err = retryOnConflict(func() error {
+			_, retryErr := controllerutil.CreateOrUpdate(ctx, r.Client, pdb, func() error {
+				desired, buildErr := resources.PDB(appEnv)
+				if buildErr != nil {
+					return buildErr
+				}
+				pdb.Labels = desired.Labels
+				pdb.Spec = desired.Spec
+				return controllerutil.SetControllerReference(appEnv, pdb, r.Scheme)
+			})
+			return retryErr
+		})
+		if err != nil {
+			return err
+		}
 	}
 	appEnv.Status.ChildResources.PDBName = pdb.Name
 	recorder.RecordChildReconciled(appEnv, "PodDisruptionBudget")
@@ -465,7 +575,18 @@ func (r *AppEnvironmentReconciler) reconcileBackupCronJob(ctx context.Context, a
 		return controllerutil.SetControllerReference(appEnv, cronjob, r.Scheme)
 	})
 	if err != nil {
-		return err
+		err = retryOnConflict(func() error {
+			_, retryErr := controllerutil.CreateOrUpdate(ctx, r.Client, cronjob, func() error {
+				desired := resources.BackupCronJob(appEnv)
+				cronjob.Labels = desired.Labels
+				cronjob.Spec = desired.Spec
+				return controllerutil.SetControllerReference(appEnv, cronjob, r.Scheme)
+			})
+			return retryErr
+		})
+		if err != nil {
+			return err
+		}
 	}
 	appEnv.Status.ChildResources.BackupCronJobName = cronjob.Name
 	statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionBackupReady, metav1.ConditionTrue, "Ready", "Backup CronJob reconciled", appEnv.Generation)
