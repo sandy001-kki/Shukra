@@ -1,0 +1,77 @@
+[
+    {
+        "path":  "README.md",
+        "bytes":  18026,
+        "extractedAt":  "2026-04-15T13:43:27.6825737+05:30"
+    },
+    {
+        "path":  "docs\\beginner-guide.md",
+        "bytes":  6182,
+        "extractedAt":  "2026-04-15T13:43:27.7060891+05:30"
+    },
+    {
+        "path":  "docs\\getting-started.md",
+        "bytes":  1937,
+        "extractedAt":  "2026-04-15T13:43:27.7091008+05:30"
+    },
+    {
+        "path":  "docs\\learning-path.md",
+        "bytes":  3701,
+        "extractedAt":  "2026-04-15T13:43:27.7120955+05:30"
+    },
+    {
+        "path":  "docs\\cli.md",
+        "bytes":  2914,
+        "extractedAt":  "2026-04-15T13:43:27.7150968+05:30"
+    },
+    {
+        "path":  "docs\\architecture.md",
+        "bytes":  2751,
+        "extractedAt":  "2026-04-15T13:43:27.7173545+05:30"
+    },
+    {
+        "path":  "docs\\tenancy.md",
+        "bytes":  1544,
+        "extractedAt":  "2026-04-15T13:43:27.7203699+05:30"
+    },
+    {
+        "path":  "docs\\troubleshooting.md",
+        "bytes":  1929,
+        "extractedAt":  "2026-04-15T13:43:27.7233741+05:30"
+    },
+    {
+        "path":  "docs\\migration-restore-walkthrough.md",
+        "bytes":  3468,
+        "extractedAt":  "2026-04-15T13:43:27.7253777+05:30"
+    },
+    {
+        "path":  "examples\\basic.yaml",
+        "bytes":  619,
+        "extractedAt":  "2026-04-15T13:43:27.7273819+05:30"
+    },
+    {
+        "path":  "examples\\ingress.yaml",
+        "bytes":  542,
+        "extractedAt":  "2026-04-15T13:43:27.7293733+05:30"
+    },
+    {
+        "path":  "examples\\autoscaling.yaml",
+        "bytes":  552,
+        "extractedAt":  "2026-04-15T13:43:27.7313938+05:30"
+    },
+    {
+        "path":  "examples\\migration.yaml",
+        "bytes":  718,
+        "extractedAt":  "2026-04-15T13:43:27.7333961+05:30"
+    },
+    {
+        "path":  "examples\\restore.yaml",
+        "bytes":  913,
+        "extractedAt":  "2026-04-15T13:43:27.7353923+05:30"
+    },
+    {
+        "path":  "examples\\paused.yaml",
+        "bytes":  611,
+        "extractedAt":  "2026-04-15T13:43:27.7363903+05:30"
+    }
+]

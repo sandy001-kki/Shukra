@@ -68,3 +68,11 @@ docs-generate:
 .PHONY: bootstrap-local
 bootstrap-local:
 	powershell -ExecutionPolicy Bypass -File .\hack\bootstrap-local.ps1
+
+.PHONY: ai-dataset
+ai-dataset:
+	powershell -ExecutionPolicy Bypass -File .\hack\prepare-ai-dataset.ps1
+
+.PHONY: ai-eval
+ai-eval:
+	powershell -ExecutionPolicy Bypass -File .\hack\evaluate-ai-readiness.ps1

@@ -1,0 +1,25 @@
+# Setting paused=true stops mutation reconciliation while still allowing status
+# refreshes. This is useful during incident response or coordinated maintenance.
+apiVersion: apps.shukra.io/v1beta1
+kind: AppEnvironment
+metadata:
+  name: paused-app
+spec:
+  paused: true
+  app:
+    image: nginx:1.27
+    containerPort: 80
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 5
+    resources:
+      requests: {cpu: 100m, memory: 128Mi}
+      limits: {cpu: 500m, memory: 512Mi}
+

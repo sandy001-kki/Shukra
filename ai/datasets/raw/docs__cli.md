@@ -152,3 +152,4 @@ Use raw YAML editing when:
 - you need the full Kubernetes-native spec surface
 - you are automating with GitOps
 - you want declarative review in pull requests
+

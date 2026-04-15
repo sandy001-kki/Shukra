@@ -1,0 +1,31 @@
+# This example shows the smallest useful environment: app image, replicas, and
+# a Service created with defaults.
+apiVersion: apps.shukra.io/v1beta1
+kind: AppEnvironment
+metadata:
+  name: basic-app
+spec:
+  app:
+    image: nginx:1.27
+    containerPort: 80
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 5
+    replicas: 2
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  service:
+    enabled: true
+

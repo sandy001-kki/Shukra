@@ -1,0 +1,27 @@
+apiVersion: apps.shukra.io/v1beta1
+kind: AppEnvironment
+metadata:
+  name: ingress-app
+spec:
+  app:
+    image: nginx:1.27
+    containerPort: 80
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 5
+    resources:
+      requests: {cpu: 100m, memory: 128Mi}
+      limits: {cpu: 500m, memory: 512Mi}
+  ingress:
+    enabled: true
+    host: ingress.example.com
+    path: /
+    tlsSecretName: ingress-app-tls
+

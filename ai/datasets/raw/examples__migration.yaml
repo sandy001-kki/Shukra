@@ -1,0 +1,33 @@
+apiVersion: apps.shukra.io/v1beta1
+kind: AppEnvironment
+metadata:
+  name: migration-app
+spec:
+  app:
+    image: nginx:1.27
+    containerPort: 80
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 5
+    resources:
+      requests: {cpu: 100m, memory: 128Mi}
+      limits: {cpu: 500m, memory: 512Mi}
+  database:
+    enabled: true
+    mode: external
+    secretRef: migration-db
+    schemaName: app
+  migration:
+    enabled: true
+    image: busybox:1.36
+    migrationID: v1-initial-schema
+    command: ["sh", "-c"]
+    args: ["echo applying migration v1-initial-schema && sleep 5"]
+

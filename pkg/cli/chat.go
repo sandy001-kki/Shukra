@@ -11,9 +11,11 @@ import (
 	"io"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,6 +33,7 @@ type chatIntent struct {
 	Name          string
 	File          string
 	Namespace     string
+	Target        string
 	MigrationID   string
 	Image         string
 	Source        string
@@ -52,6 +55,9 @@ operator and AppEnvironment tasks.
 
 You can type plain English commands such as:
   status basic-app
+  list environments
+  diagnose basic-app
+  show resources for basic-app
   apply examples/basic.yaml
   install operator from oci version 0.2.2
   show operator logs
@@ -83,6 +89,9 @@ func runChatREPL(cmd *cobra.Command, opts *RootOptions, version, commit, date st
 	fmt.Fprintln(out)
 	printTitle(out, "Try saying")
 	printNote(out, "-", "status basic-app")
+	printNote(out, "-", "list environments")
+	printNote(out, "-", "diagnose basic-app")
+	printNote(out, "-", "show resources for basic-app")
 	printNote(out, "-", "apply examples/basic.yaml")
 	printNote(out, "-", "show operator logs")
 	printNote(out, "-", "pause basic-app")
@@ -133,6 +142,12 @@ func executeChatInput(cmd *cobra.Command, opts *RootOptions, version, commit, da
 		return nil
 	case "status":
 		return chatStatus(cmd, opts, intent)
+	case "list":
+		return chatListEnvironments(cmd, opts, intent)
+	case "resources":
+		return chatResources(cmd, opts, intent)
+	case "diagnose":
+		return chatDiagnose(cmd, opts, intent)
 	case "apply":
 		return chatApply(cmd, opts, intent)
 	case "pause":
@@ -191,6 +206,15 @@ func parseChatIntent(input, defaultNamespace string) chatIntent {
 	case "logs", "show operator logs", "operator logs", "show logs":
 		intent.Action = "logs"
 		return intent
+	case "list", "list environments", "show environments", "show appenvironments":
+		intent.Action = "list"
+		intent.Target = "environments"
+		intent.Namespace = parseNamespace(normalized, defaultNamespace)
+		return intent
+	case "operator status", "show operator status", "status operator":
+		intent.Action = "diagnose"
+		intent.Target = "operator"
+		return intent
 	}
 
 	if strings.HasPrefix(normalized, "apply ") {
@@ -201,6 +225,17 @@ func parseChatIntent(input, defaultNamespace string) chatIntent {
 	if strings.HasPrefix(normalized, "status ") {
 		intent.Action = "status"
 		intent.Name = firstWord(strings.TrimSpace(input[len("status "):]))
+		intent.Namespace = parseNamespace(normalized, defaultNamespace)
+		if intent.Name == "operator" {
+			intent.Action = "diagnose"
+			intent.Target = "operator"
+			intent.Name = ""
+		}
+		return intent
+	}
+	if strings.HasPrefix(normalized, "list ") {
+		intent.Action = "list"
+		intent.Target = strings.TrimSpace(input[len("list "):])
 		intent.Namespace = parseNamespace(normalized, defaultNamespace)
 		return intent
 	}
@@ -225,6 +260,34 @@ func parseChatIntent(input, defaultNamespace string) chatIntent {
 	if strings.HasPrefix(normalized, "show status for ") {
 		intent.Action = "status"
 		intent.Name = firstWord(strings.TrimSpace(input[len("show status for "):]))
+		intent.Namespace = parseNamespace(normalized, defaultNamespace)
+		return intent
+	}
+	if strings.HasPrefix(normalized, "show resources for ") {
+		intent.Action = "resources"
+		intent.Name = firstWord(strings.TrimSpace(input[len("show resources for "):]))
+		intent.Namespace = parseNamespace(normalized, defaultNamespace)
+		return intent
+	}
+	if strings.HasPrefix(normalized, "resources for ") {
+		intent.Action = "resources"
+		intent.Name = firstWord(strings.TrimSpace(input[len("resources for "):]))
+		intent.Namespace = parseNamespace(normalized, defaultNamespace)
+		return intent
+	}
+	if strings.HasPrefix(normalized, "diagnose ") {
+		intent.Action = "diagnose"
+		intent.Name = firstWord(strings.TrimSpace(input[len("diagnose "):]))
+		intent.Namespace = parseNamespace(normalized, defaultNamespace)
+		if intent.Name == "operator" {
+			intent.Target = "operator"
+			intent.Name = ""
+		}
+		return intent
+	}
+	if strings.HasPrefix(normalized, "show diagnosis for ") {
+		intent.Action = "diagnose"
+		intent.Name = firstWord(strings.TrimSpace(input[len("show diagnosis for "):]))
 		intent.Namespace = parseNamespace(normalized, defaultNamespace)
 		return intent
 	}
@@ -311,6 +374,10 @@ func detectNameFromAction(normalized, action string) string {
 func printChatHelp(out io.Writer) {
 	printTitle(out, "What you can say")
 	printNote(out, "-", "status basic-app")
+	printNote(out, "-", "list environments")
+	printNote(out, "-", "show resources for basic-app")
+	printNote(out, "-", "diagnose basic-app")
+	printNote(out, "-", "show operator status")
 	printNote(out, "-", "show status for basic-app in default")
 	printNote(out, "-", "apply examples/basic.yaml")
 	printNote(out, "-", "pause basic-app")
@@ -360,6 +427,187 @@ func chatStatus(cmd *cobra.Command, opts *RootOptions, intent chatIntent) error 
 	}
 
 	printStatusSummary(cmd, appEnv)
+	return nil
+}
+
+func chatListEnvironments(cmd *cobra.Command, opts *RootOptions, intent chatIntent) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	chatOpts := *opts
+	chatOpts.Namespace = intent.Namespace
+	kubeClient, _, err := buildClient(ctx, &chatOpts)
+	if err != nil {
+		return err
+	}
+
+	list := &appsv1beta1.AppEnvironmentList{}
+	if err := kubeClient.List(ctx, list); err != nil {
+		return fmt.Errorf("list AppEnvironments: %w", err)
+	}
+
+	filtered := make([]appsv1beta1.AppEnvironment, 0, len(list.Items))
+	for _, item := range list.Items {
+		if intent.Namespace != "" && intent.Namespace != "all" && item.Namespace != intent.Namespace {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	sort.Slice(filtered, func(i, j int) bool {
+		if filtered[i].Namespace == filtered[j].Namespace {
+			return filtered[i].Name < filtered[j].Name
+		}
+		return filtered[i].Namespace < filtered[j].Namespace
+	})
+
+	printTitle(cmd.OutOrStdout(), "AppEnvironments")
+	if len(filtered) == 0 {
+		printNote(cmd.OutOrStdout(), "-", "No AppEnvironment resources found.")
+		return nil
+	}
+	for _, item := range filtered {
+		line := fmt.Sprintf("%s/%s  phase=%s  ready=%s", item.Namespace, item.Name, emptyDash(item.Status.Phase), conditionStatus(item.Status.Conditions, appsv1beta1.ConditionReady))
+		printNote(cmd.OutOrStdout(), "-", line)
+	}
+	return nil
+}
+
+func chatResources(cmd *cobra.Command, opts *RootOptions, intent chatIntent) error {
+	if intent.Name == "" {
+		return fmt.Errorf("please tell me which AppEnvironment to inspect, for example: show resources for basic-app")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	chatOpts := *opts
+	chatOpts.Namespace = intent.Namespace
+	kubeClient, _, err := buildClient(ctx, &chatOpts)
+	if err != nil {
+		return err
+	}
+
+	appEnv := &appsv1beta1.AppEnvironment{}
+	key := types.NamespacedName{Name: intent.Name, Namespace: intent.Namespace}
+	if err := kubeClient.Get(ctx, key, appEnv); err != nil {
+		return fmt.Errorf("get AppEnvironment %s/%s: %w", intent.Namespace, intent.Name, err)
+	}
+
+	printTitle(cmd.OutOrStdout(), "Environment Resources")
+	printKV(cmd.OutOrStdout(), "Environment", appEnv.Name)
+	printKV(cmd.OutOrStdout(), "Namespace", appEnv.Namespace)
+	fmt.Fprintln(cmd.OutOrStdout())
+	printTitle(cmd.OutOrStdout(), "Declared Children")
+
+	resources := []string{
+		describeChild("ConfigMap", appEnv.Status.ChildResources.ConfigMapName),
+		describeChild("Service", appEnv.Status.ChildResources.ServiceName),
+		describeChild("Deployment", appEnv.Status.ChildResources.DeploymentName),
+		describeChild("HPA", appEnv.Status.ChildResources.HPAName),
+		describeChild("Ingress", appEnv.Status.ChildResources.IngressName),
+		describeChild("Migration Job", appEnv.Status.ChildResources.MigrationJobName),
+		describeChild("Restore Job", appEnv.Status.ChildResources.RestoreJobName),
+		describeChild("Backup CronJob", appEnv.Status.ChildResources.BackupCronJobName),
+		describeChild("NetworkPolicy", appEnv.Status.ChildResources.NetworkPolicyName),
+		describeChild("PDB", appEnv.Status.ChildResources.PDBName),
+	}
+	for _, resource := range resources {
+		if resource != "" {
+			printNote(cmd.OutOrStdout(), "-", resource)
+		}
+	}
+	return nil
+}
+
+func chatDiagnose(cmd *cobra.Command, opts *RootOptions, intent chatIntent) error {
+	if intent.Target == "operator" {
+		return chatOperatorStatus(cmd, opts)
+	}
+	if intent.Name == "" {
+		return fmt.Errorf("please tell me which AppEnvironment to diagnose, for example: diagnose basic-app")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	chatOpts := *opts
+	chatOpts.Namespace = intent.Namespace
+	kubeClient, _, err := buildClient(ctx, &chatOpts)
+	if err != nil {
+		return err
+	}
+
+	appEnv := &appsv1beta1.AppEnvironment{}
+	key := types.NamespacedName{Name: intent.Name, Namespace: intent.Namespace}
+	if err := kubeClient.Get(ctx, key, appEnv); err != nil {
+		return fmt.Errorf("get AppEnvironment %s/%s: %w", intent.Namespace, intent.Name, err)
+	}
+
+	printTitle(cmd.OutOrStdout(), "Environment Diagnosis")
+	printKV(cmd.OutOrStdout(), "Environment", fmt.Sprintf("%s/%s", appEnv.Namespace, appEnv.Name))
+	printKV(cmd.OutOrStdout(), "Phase", emptyDash(appEnv.Status.Phase))
+	printKV(cmd.OutOrStdout(), "Ready", conditionStatus(appEnv.Status.Conditions, appsv1beta1.ConditionReady))
+	printKV(cmd.OutOrStdout(), "Paused", conditionStatus(appEnv.Status.Conditions, appsv1beta1.ConditionPaused))
+	printKV(cmd.OutOrStdout(), "Failure count", fmt.Sprintf("%d", appEnv.Status.FailureCount))
+	printKV(cmd.OutOrStdout(), "Last error", emptyDash(appEnv.Status.LastError))
+	fmt.Fprintln(cmd.OutOrStdout())
+
+	printTitle(cmd.OutOrStdout(), "Assessment")
+	if isConditionTrue(appEnv.Status.Conditions, appsv1beta1.ConditionReady) && appEnv.Status.LastError == "" {
+		printNote(cmd.OutOrStdout(), "-", "The environment is healthy. Reconciliation is succeeding.")
+	} else if appEnv.Status.LastError != "" {
+		printNote(cmd.OutOrStdout(), "-", "The environment has a recorded reconcile error. Check operator logs next.")
+	} else {
+		printNote(cmd.OutOrStdout(), "-", "The environment is not fully ready yet. Review conditions and child resources.")
+	}
+	if appEnv.Status.FailureCount > 0 && appEnv.Status.LastError == "" {
+		printNote(cmd.OutOrStdout(), "-", "Failure count is historical. The current status is healthier than earlier attempts.")
+	}
+
+	fmt.Fprintln(cmd.OutOrStdout())
+	printTitle(cmd.OutOrStdout(), "Next checks")
+	printNote(cmd.OutOrStdout(), "-", fmt.Sprintf("shukra chat --message \"show resources for %s\"", appEnv.Name))
+	printNote(cmd.OutOrStdout(), "-", "shukra chat --message \"show operator logs\"")
+	return nil
+}
+
+func chatOperatorStatus(cmd *cobra.Command, opts *RootOptions) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	kubeClient, _, err := buildClient(ctx, opts)
+	if err != nil {
+		return err
+	}
+
+	podList := &corev1.PodList{}
+	if err := kubeClient.List(ctx, podList); err != nil {
+		return fmt.Errorf("list pods: %w", err)
+	}
+
+	managedPods := []corev1.Pod{}
+	for _, pod := range podList.Items {
+		if pod.Namespace == "shukra-system" && strings.Contains(pod.Name, "shukra-operator") {
+			managedPods = append(managedPods, pod)
+		}
+	}
+
+	printTitle(cmd.OutOrStdout(), "Operator Status")
+	if len(managedPods) == 0 {
+		printNote(cmd.OutOrStdout(), "-", "No shukra-operator pods found in shukra-system.")
+		return nil
+	}
+	for _, pod := range managedPods {
+		ready := "False"
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type == corev1.PodReady {
+				ready = string(condition.Status)
+				break
+			}
+		}
+		line := fmt.Sprintf("%s  phase=%s  ready=%s  node=%s", pod.Name, pod.Status.Phase, ready, emptyDash(pod.Spec.NodeName))
+		printNote(cmd.OutOrStdout(), "-", line)
+	}
 	return nil
 }
 
@@ -570,4 +818,24 @@ func chatUninstall(cmd *cobra.Command, opts *RootOptions) error {
 func chatBootstrap(cmd *cobra.Command) error {
 	printTitle(cmd.OutOrStdout(), "Bootstrapping Local Shukra Environment")
 	return runCommand("powershell", "-ExecutionPolicy", "Bypass", "-File", ".\\hack\\bootstrap-local.ps1")
+}
+
+func conditionStatus(conditions []metav1.Condition, conditionType string) string {
+	for _, condition := range conditions {
+		if condition.Type == conditionType {
+			return string(condition.Status)
+		}
+	}
+	return "Unknown"
+}
+
+func isConditionTrue(conditions []metav1.Condition, conditionType string) bool {
+	return conditionStatus(conditions, conditionType) == string(metav1.ConditionTrue)
+}
+
+func describeChild(kind, name string) string {
+	if name == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s: %s", kind, name)
 }
