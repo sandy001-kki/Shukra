@@ -3,6 +3,11 @@
 This guide is for a brand new user who wants to run Shukra Operator with the
 smallest amount of Kubernetes knowledge.
 
+It covers both:
+
+- local development clusters
+- users who already have a Kubernetes cluster
+
 ## What you need
 
 - a Kubernetes cluster
@@ -10,10 +15,22 @@ smallest amount of Kubernetes knowledge.
 - Helm
 - cert-manager installed in the cluster
 
+If you already have a cluster, you can skip the local bootstrap path and follow
+[docs/bring-your-own-cluster.md](bring-your-own-cluster.md).
+
 ## Install the operator
 
 ```bash
 helm install shukra-operator charts/shukra-operator \
+  -n shukra-system \
+  --create-namespace
+```
+
+If you want the published chart instead of a Git checkout:
+
+```bash
+helm install shukra-operator oci://ghcr.io/sandy001-kki/charts/shukra-operator \
+  --version 0.2.3 \
   -n shukra-system \
   --create-namespace
 ```
@@ -28,6 +45,8 @@ powershell -ExecutionPolicy Bypass -File .\hack\bootstrap-local.ps1
 
 This automates Docker startup, kind cluster creation, cert-manager install,
 operator image build, image load, Helm install, and applying the basic example.
+
+This path is for local development convenience only.
 
 ## Apply your first environment
 
@@ -83,12 +102,14 @@ custom resource disappears.
 ## If something goes wrong
 
 ```bash
+shukra doctor
 kubectl describe appenvironment basic-app
 kubectl logs -n shukra-system deploy/shukra-operator
 ```
 
 For more detail, read:
 
+- `docs/bring-your-own-cluster.md`
 - `docs/learning-path.md`
 - `docs/architecture.md`
 - `docs/tenancy.md`

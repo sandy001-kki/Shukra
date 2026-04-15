@@ -70,6 +70,9 @@ It checks:
 - operator pod readiness
 - cert-manager pod readiness
 
+On existing remote clusters, Docker is optional. `shukra doctor` treats Docker
+as required only for local image-build and kind-style workflows.
+
 ## Core commands
 
 Print the CLI version:
@@ -166,6 +169,11 @@ Use the CLI for:
 - day-two environment inspection
 - common lifecycle actions
 - starter YAML generation
+
+If you already have a Kubernetes cluster, combine this guide with:
+
+- [docs/bring-your-own-cluster.md](bring-your-own-cluster.md)
+- [docs/helm-values.md](helm-values.md)
 
 Use raw YAML editing when:
 

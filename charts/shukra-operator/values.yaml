@@ -1,3 +1,7 @@
+# Default values for the Shukra Operator chart.
+# These defaults work for local development, but production clusters should
+# review image pinning, reconcile concurrency, resource requests, watch scope,
+# and cert-manager issuer settings explicitly.
 image:
   repository: ghcr.io/sandy001-kki/shukra-operator
   tag: latest

@@ -22,6 +22,15 @@ Repository: [github.com/sandy001-kki/Shukra](https://github.com/sandy001-kki/Shu
 
 ## Use it now
 
+Shukra is a general Kubernetes Operator, not a Docker-only project.
+
+You can use it on:
+
+- Docker Desktop with kind or k3d for local development
+- Minikube or k3s for small local clusters
+- EKS, GKE, or AKS
+- any Kubernetes cluster that meets the documented prerequisites
+
 If you want the shortest path from clone to a working local Shukra environment:
 
 ```powershell
@@ -47,6 +56,9 @@ If you want a full environment health check before anything else, run:
 go run .\cmd\shukra doctor
 ```
 
+If you already have your own Kubernetes cluster, skip the local bootstrap flow
+and read [docs/bring-your-own-cluster.md](docs/bring-your-own-cluster.md).
+
 ## About
 
 Shukra Operator is a production-grade Kubernetes Operator for teams that want a
@@ -67,6 +79,7 @@ In simple terms, Shukra acts like the platform sage for your application:
 | If you are... | Read this first | Then do this |
 | --- | --- | --- |
 | completely new to Docker or Kubernetes | [docs/beginner-guide.md](docs/beginner-guide.md) | [docs/getting-started.md](docs/getting-started.md) |
+| a user with an existing Kubernetes cluster | [docs/bring-your-own-cluster.md](docs/bring-your-own-cluster.md) | [Helm values for production](docs/helm-values.md) |
 | a user who wants the shortest path to a working environment | [Five minute quickstart](#five-minute-quickstart) | [Shukra CLI](#shukra-cli) |
 | a contributor who wants architecture and release context | [docs/learning-path.md](docs/learning-path.md) | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
@@ -93,7 +106,9 @@ flowchart LR
 
 - [Completely new to Docker or Kubernetes?](#completely-new-to-docker-or-kubernetes)
 - [One-command local bootstrap](#one-command-local-bootstrap)
+- [Bring your own cluster](#bring-your-own-cluster)
 - [Install from OCI Helm chart](#install-from-oci-helm-chart)
+- [Helm values for production](#helm-values-for-production)
 - [Shukra CLI](#shukra-cli)
 - [Shukra Chat](#shukra-chat)
 - [Shukra AI roadmap](#shukra-ai-roadmap)
@@ -114,6 +129,24 @@ That guide explains:
 - what an Operator is
 - how Shukra fits into that stack
 - how to use the one-command bootstrap
+
+## Bring your own cluster
+
+Shukra is designed for any compatible Kubernetes cluster, not just the local
+kind workflow in this repository.
+
+If you already operate a cluster, the normal path is:
+
+1. make sure `kubectl` points to the target cluster
+2. install cert-manager if your platform does not already provide webhook TLS management
+3. install Shukra with Helm
+4. apply an `AppEnvironment`
+5. use `shukra doctor`, `shukra chat`, or `kubectl` to inspect status
+
+Read the full cluster-agnostic guide here:
+
+- [docs/bring-your-own-cluster.md](docs/bring-your-own-cluster.md)
+- [docs/helm-values.md](docs/helm-values.md)
 
 ## Why this project exists
 
@@ -204,7 +237,7 @@ Shukra is useful for:
 - Kubernetes 1.26+
 - Helm 3.13+
 - cert-manager 1.13+
-- Docker and kind for local cluster testing
+- Docker and kind for local cluster testing only
 
 ## Quick install from GitHub checkout
 
@@ -232,6 +265,9 @@ That chart installs:
 - cert-manager issuer and certificate resources
 - metrics and webhook Services
 
+For a cluster-agnostic install flow with OCI chart examples and production
+guidance, see [docs/bring-your-own-cluster.md](docs/bring-your-own-cluster.md).
+
 ## Five minute quickstart
 
 If you are new to the project, this is the shortest useful path:
@@ -253,6 +289,9 @@ If you want a structured progression from total beginner to contributor, read
 
 If you want the command-line interface guide, read
 [docs/cli.md](docs/cli.md).
+
+If you already have a Kubernetes cluster and want the non-local install path,
+read [docs/bring-your-own-cluster.md](docs/bring-your-own-cluster.md).
 
 ## Shukra Chat
 
@@ -294,8 +333,8 @@ It also supports operator-aware inspection flows such as:
 - diagnosing environment health
 - showing operator pod status
 
-There is also a deterministic health-check command for the local toolchain and
-cluster:
+There is also a deterministic health-check command for both local and
+bring-your-own-cluster setups:
 
 ```powershell
 go run .\cmd\shukra doctor
@@ -307,6 +346,9 @@ What works today:
 - live status and diagnosis against the cluster
 - operator install/bootstrap flows
 - safe lifecycle actions such as apply, pause, resume, delete, migrate, and restore
+
+For non-local clusters, `shukra doctor` treats Docker as optional and focuses on
+cluster reachability, CRDs, operator Pods, and cert-manager state.
 
 ## Shukra AI roadmap
 
@@ -385,6 +427,9 @@ You can run the same flow through the CLI:
 shukra bootstrap local
 ```
 
+This workflow is optional convenience for local development only. It is not
+required for users who already have a Kubernetes cluster.
+
 ## Install from OCI Helm chart
 
 If a published chart is available in GHCR, install it directly:
@@ -404,6 +449,28 @@ ghcr.io/sandy001-kki/shukra-operator:0.2.3
 
 The GitHub release also includes standalone CLI binaries for Linux, Windows,
 and macOS.
+
+## Helm values for production
+
+The Helm chart supports production-oriented configuration through
+`charts/shukra-operator/values.yaml`.
+
+Common areas to tune:
+
+- image repository, tag, and pull policy
+- replica count
+- leader election namespace
+- watch namespace
+- max concurrent reconciles
+- controller CPU and memory
+- security context
+- cert-manager issuer settings
+- metrics exposure
+- service account name
+
+Read the full values guide here:
+
+- [docs/helm-values.md](docs/helm-values.md)
 
 ## Shukra CLI
 
@@ -650,6 +717,8 @@ The repository contains:
 
 - [docs/beginner-guide.md](docs/beginner-guide.md)
 - [docs/getting-started.md](docs/getting-started.md)
+- [docs/bring-your-own-cluster.md](docs/bring-your-own-cluster.md)
+- [docs/helm-values.md](docs/helm-values.md)
 - [docs/learning-path.md](docs/learning-path.md)
 - [docs/cli.md](docs/cli.md)
 - [docs/ai-roadmap.md](docs/ai-roadmap.md)
