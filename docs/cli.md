@@ -122,6 +122,40 @@ shukra completion powershell | Out-String | Invoke-Expression
 
 For persistent local setup, add that line to your PowerShell profile.
 
+## Web Console
+
+Shukra includes a lightweight local Web Console for users who want a browser
+dashboard instead of terminal-only inspection.
+
+```powershell
+shukra console
+```
+
+By default it listens on `127.0.0.1:8088`.
+
+The console is intentionally localhost-only by default because it reads your
+current kube context and is meant to stay inside your local trust boundary.
+That keeps the browser UI useful without turning it into an exposed remote
+cluster control surface.
+
+What the console includes today:
+
+- environment table and per-environment cards
+- operator pod status
+- JSON API at `/api/environments`
+- safe action buttons for:
+  - `doctor`
+  - operator diagnosis
+  - operator logs
+  - apply basic example
+  - environment diagnosis
+  - pause
+  - resume
+  - delete
+
+The console does not provide arbitrary shell access from the browser. It runs
+only whitelisted local Shukra actions and returns their output in the page.
+
 ## Core commands
 
 Print the CLI version:

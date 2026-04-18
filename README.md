@@ -368,6 +368,50 @@ If you prefer explicit commands over chat, Shukra also includes:
 - `shukra ask "<question>"` for grounded answers from local Shukra docs
 - `shukra completion powershell` for PowerShell tab completion setup
 
+## Shukra Web Console
+
+If you want a browser-based operations surface instead of terminal-only
+inspection, run:
+
+```powershell
+go run .\cmd\shukra console
+```
+
+By default it serves on:
+
+```text
+http://127.0.0.1:8088
+```
+
+The console is intentionally simple and local-first. It gives users:
+
+- a white-background, black-text browser dashboard
+- an environment table with phase, readiness, failure count, URL, and last success
+- operator pod visibility
+- full condition breakdown for each `AppEnvironment`
+- a JSON API at `/api/environments`
+- safe browser-triggered actions for doctor, operator diagnosis, operator logs, apply basic example, diagnose env, pause, resume, and delete
+
+### Why localhost only
+
+The Web Console is intentionally bound to `127.0.0.1` by default because it is
+not meant to become an exposed remote admin panel.
+
+We use localhost for security and operational clarity:
+
+- the console reads your current kube context and local credentials
+- browser-triggered actions should affect only the machine you are actively using
+- localhost reduces the risk of exposing cluster control surfaces to a wider network
+- it keeps the Web Console inside your local trust boundary instead of pretending to be a shared platform gateway
+- it allows useful controls without exposing arbitrary shell execution from a web page
+
+In simple terms: the browser is the UI, but your machine remains the trusted
+execution boundary.
+
+The console does not expose raw unrestricted terminal access. Instead, it runs
+only a small whitelist of Shukra-specific local actions that are useful in
+daily operations.
+
 ## Shukra AI roadmap
 
 Shukra can evolve into a real AI-assisted operator workflow, but there is an
