@@ -57,6 +57,7 @@ go run .\cmd\shukra doctor -o json
 go run .\cmd\shukra diagnose env basic-app -n default
 go run .\cmd\shukra ask "How do I install Shukra on my own cluster?"
 go run .\cmd\shukra completion powershell
+go run .\cmd\shukra console
 ```
 
 If you want a full environment health check before anything else, run:
