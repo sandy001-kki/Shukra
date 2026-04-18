@@ -33,6 +33,7 @@ type consoleCondition struct {
 }
 
 type consoleEnvironment struct {
+	AnchorID     string
 	Name         string
 	Namespace    string
 	Phase        string
@@ -169,6 +170,7 @@ func buildConsolePage(ctx context.Context, opts *RootOptions, addr string) (*con
 
 	for _, item := range list.Items {
 		env := consoleEnvironment{
+			AnchorID:     consoleAnchorID(item.Namespace, item.Name),
 			Name:         item.Name,
 			Namespace:    item.Namespace,
 			Phase:        emptyDash(item.Status.Phase),
@@ -468,6 +470,11 @@ func formatConsoleTime(value *metav1.Time) string {
 	return value.Time.Format("2006-01-02 15:04:05 MST")
 }
 
+func consoleAnchorID(namespace, name string) string {
+	replacer := strings.NewReplacer("/", "-", ".", "-", "_", "-", " ", "-")
+	return "env-" + replacer.Replace(namespace) + "-" + replacer.Replace(name)
+}
+
 var consoleTemplate = template.Must(template.New("console").Parse(`<!doctype html>
 <html lang="en">
 <head>
@@ -476,207 +483,576 @@ var consoleTemplate = template.Must(template.New("console").Parse(`<!doctype htm
   <meta http-equiv="refresh" content="15">
   <title>Shukra Web Console</title>
   <style>
-    :root { color-scheme: light; }
-    * { box-sizing:border-box; }
-    body { margin:0; background:#fff; color:#000; font-family:Segoe UI, Arial, sans-serif; }
-    .wrap { max-width:1440px; margin:0 auto; padding:24px; }
-    .hero, .panel, .card, .table-wrap, .command-box { background:#fff; border:1px solid #000; }
-    .hero, .panel, .card { padding:20px; }
-    h1, h2, h3 { margin:0; font-weight:700; }
-    h1 { font-size:38px; }
-    h2 { font-size:22px; margin-bottom:12px; }
-    h3 { font-size:16px; margin-bottom:10px; }
-    p { line-height:1.5; }
-    .sub { margin:10px 0 0; max-width:860px; }
-    .grid { display:grid; gap:18px; }
-    .top-grid { grid-template-columns:2fr 1fr; margin-top:18px; }
-    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-top:18px; }
-    .stat { border:1px solid #000; padding:12px; background:#fff; }
-    .label { font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
-    .value { font-size:28px; margin-top:8px; }
-    .code, pre { margin:0; white-space:pre-wrap; word-break:break-word; font-family:Consolas, monospace; }
-    .command-box { padding:14px; }
-    .table-wrap { margin-top:18px; overflow:auto; }
-    table { width:100%; border-collapse:collapse; }
-    th, td { border-bottom:1px solid #000; padding:14px; vertical-align:top; text-align:left; }
-    th { background:#fff; font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
-    .phase { display:inline-block; border:1px solid #000; padding:5px 10px; font-size:12px; text-transform:uppercase; }
-    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(430px,1fr)); gap:18px; margin-top:18px; }
-    .meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:16px 0; }
-    .meta-box { border:1px solid #000; padding:10px; min-height:68px; }
-    .meta-box strong { display:block; font-size:11px; text-transform:uppercase; margin-bottom:6px; }
-    .list { margin:0; padding-left:18px; }
-    .list li { margin:4px 0; }
-    .conditions { display:grid; gap:10px; margin-top:12px; }
-    .condition { border:1px solid #000; padding:10px; }
-    .condition .type { font-size:12px; text-transform:uppercase; }
-    .condition .reason { font-size:12px; margin-top:6px; }
-    .condition .message { font-size:13px; margin-top:6px; }
-    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
-    form { margin:0; }
-    button, a.button {
-      display:inline-block;
-      background:#fff;
-      color:#000;
-      border:1px solid #000;
-      padding:10px 14px;
-      text-decoration:none;
-      cursor:pointer;
-      font-size:12px;
-      text-transform:uppercase;
-      letter-spacing:.08em;
+    :root {
+      color-scheme: light;
+      --page: #f6f1e8;
+      --surface: #fffdf9;
+      --surface-2: #f1e7d8;
+      --line: #1f2a1f;
+      --ink: #1f2a1f;
+      --muted: #5c6756;
+      --sage: #7f9378;
+      --sage-deep: #425342;
+      --amber: #b7791f;
+      --amber-soft: #ead6b6;
+      --danger: #9b3d2f;
+      --success: #2f6a4f;
+      --shadow: rgba(31, 42, 31, 0.08);
     }
-    .footer { font-size:13px; margin-top:18px; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+    .wrap {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .hero, .toolbar, .panel, .card, .table-wrap, .jump-list, .shell {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: 0 14px 30px var(--shadow);
+    }
+    .hero, .toolbar, .panel, .card, .jump-list, .shell { padding: 22px; }
+    h1, h2, h3 {
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    h1 {
+      font-size: 44px;
+      line-height: 1.02;
+      max-width: 11ch;
+    }
+    h2 { font-size: 23px; margin-bottom: 12px; }
+    h3 { font-size: 16px; margin-bottom: 10px; }
+    p { line-height: 1.6; }
+    .eyebrow {
+      display: inline-block;
+      border: 1px solid var(--sage-deep);
+      color: var(--sage-deep);
+      background: var(--surface-2);
+      padding: 6px 10px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      margin-bottom: 12px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.45fr .95fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .sub {
+      margin: 14px 0 0;
+      max-width: 920px;
+      font-size: 16px;
+      color: var(--muted);
+    }
+    .token-row, .actions, .mini-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .token {
+      display: inline-block;
+      border: 1px solid var(--sage);
+      background: var(--surface-2);
+      color: var(--sage-deep);
+      padding: 6px 10px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .stat {
+      border: 1px solid var(--sage);
+      background: var(--surface);
+      padding: 14px;
+    }
+    .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+    .value {
+      font-size: 30px;
+      margin-top: 8px;
+      color: var(--ink);
+    }
+    .shell {
+      background: var(--ink);
+      color: #f3ecdf;
+      border-color: var(--ink);
+    }
+    .shell h3 { color: #f8f2e7; }
+    .code, pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .toolbar {
+      margin-top: 18px;
+      display: grid;
+      gap: 16px;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+    }
+    .section-head p {
+      margin: 0;
+      max-width: 720px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .toolbar-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 12px;
+    }
+    .search-wrap label {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .search-wrap input, .search-wrap select {
+      width: 100%;
+      border: 1px solid var(--sage);
+      background: #fff;
+      color: var(--ink);
+      padding: 12px 14px;
+      font-size: 14px;
+      outline: none;
+    }
+    .search-wrap input:focus, .search-wrap select:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 3px rgba(183, 121, 31, 0.15);
+    }
+    .workspace {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 18px;
+      margin-top: 18px;
+      align-items: start;
+    }
+    .sidebar {
+      display: grid;
+      gap: 18px;
+      position: sticky;
+      top: 18px;
+    }
+    .footnote {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 0;
+    }
+    .jump-links {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .jump-links a, button, a.button {
+      display: inline-block;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      padding: 10px 14px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    .jump-links a:hover, .jump-links a:focus-visible, button:hover, a.button:hover, button:focus-visible, a.button:focus-visible {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+      outline: none;
+      transform: translateY(-1px);
+    }
+    .table-wrap {
+      overflow: auto;
+      background: var(--surface);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border-bottom: 1px solid rgba(31, 42, 31, 0.16);
+      padding: 14px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      background: rgba(127, 147, 120, 0.08);
+    }
+    .phase {
+      display: inline-block;
+      border: 1px solid var(--sage);
+      background: var(--surface-2);
+      color: var(--sage-deep);
+      padding: 6px 10px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .row-link {
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px solid var(--amber);
+    }
+    .row-link:hover, .row-link:focus-visible {
+      color: var(--amber);
+      outline: none;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .card {
+      background: var(--surface);
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+    .card-name {
+      font-size: 25px;
+      font-weight: 700;
+    }
+    .card-ns {
+      color: var(--muted);
+      margin-top: 4px;
+      font-size: 14px;
+    }
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .meta-box {
+      border: 1px solid rgba(31, 42, 31, 0.2);
+      background: rgba(127, 147, 120, 0.08);
+      padding: 12px;
+      min-height: 72px;
+    }
+    .meta-box strong {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 6px;
+      color: var(--muted);
+    }
+    .list {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .list li { margin: 4px 0; }
+    .conditions {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .condition {
+      border: 1px solid rgba(31, 42, 31, 0.18);
+      background: rgba(255, 255, 255, 0.72);
+      padding: 11px;
+    }
+    .condition .type {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--sage-deep);
+    }
+    .condition .reason {
+      font-size: 12px;
+      margin-top: 6px;
+      color: var(--muted);
+    }
+    .condition .message {
+      font-size: 13px;
+      margin-top: 6px;
+    }
+    .operator-list li {
+      margin: 8px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed rgba(31, 42, 31, 0.24);
+    }
+    .footer {
+      font-size: 13px;
+      margin-top: 18px;
+      color: var(--muted);
+    }
     @media (max-width: 980px) {
-      .top-grid { grid-template-columns:1fr; }
-      .cards { grid-template-columns:1fr; }
+      .hero-grid, .toolbar-grid, .workspace { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .cards { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <section class="hero">
-      <h1>Shukra Web Console</h1>
-      <p class="sub">A localhost-only operations dashboard for AppEnvironment health, operator state, safe browser-triggered actions, and cluster troubleshooting. The console stays on <strong>{{.LocalhostAddress}}</strong> so it can use your local kube context without becoming an exposed remote admin surface.</p>
-      <div class="stats">
-        <div class="stat"><div class="label">Visible environments</div><div class="value">{{.Count}}</div></div>
-        <div class="stat"><div class="label">Ready</div><div class="value">{{.ReadyCount}}</div></div>
-        <div class="stat"><div class="label">Running</div><div class="value">{{.RunningCount}}</div></div>
-        <div class="stat"><div class="label">Paused</div><div class="value">{{.PausedCount}}</div></div>
-        <div class="stat"><div class="label">Failed</div><div class="value">{{.FailedCount}}</div></div>
-        <div class="stat"><div class="label">Degraded</div><div class="value">{{.DegradedCount}}</div></div>
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">Shukra Operations Surface</div>
+          <h1>Shukra Web Console</h1>
+          <p class="sub">A local operator workspace for AppEnvironment health, operator visibility, and safe action flows. This console stays on <strong>{{.LocalhostAddress}}</strong> so it can use your kube context without exposing a remote control plane.</p>
+          <div class="token-row" style="margin-top:14px;">
+            <span class="token">Cluster {{.Cluster}}</span>
+            <span class="token">Namespace {{.Namespace}}</span>
+            <span class="token">Operator {{.OperatorNamespace}}</span>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="label">Visible environments</div><div class="value">{{.Count}}</div></div>
+            <div class="stat"><div class="label">Ready</div><div class="value">{{.ReadyCount}}</div></div>
+            <div class="stat"><div class="label">Running</div><div class="value">{{.RunningCount}}</div></div>
+            <div class="stat"><div class="label">Paused</div><div class="value">{{.PausedCount}}</div></div>
+            <div class="stat"><div class="label">Failed</div><div class="value">{{.FailedCount}}</div></div>
+            <div class="stat"><div class="label">Degraded</div><div class="value">{{.DegradedCount}}</div></div>
+          </div>
+        </div>
+        <div class="shell">
+          <h3>Console Contract</h3>
+          <pre class="code">Generated: {{.GeneratedAt}}
+Address: {{.LocalhostAddress}}
+JSON API: /api/environments
+
+Browser actions are whitelisted.
+No arbitrary shell is exposed.
+This UI is for local operator work.</pre>
+        </div>
       </div>
     </section>
 
-    <section class="grid top-grid">
-      <div class="panel">
-        <h2>Cluster Summary</h2>
-        <div class="command-box"><pre class="code">Cluster context: {{.Cluster}}
-Namespace flag: {{.Namespace}}
-Operator namespace: {{.OperatorNamespace}}
-Generated: {{.GeneratedAt}}
-JSON API: /api/environments</pre></div>
-        <div class="actions">
+    <section class="toolbar" aria-label="Workspace toolbar">
+      <div class="section-head">
+        <div>
+          <h2>Workspace</h2>
+          <p>Use filters to narrow the visible environments, jump directly to a resource card, or run safe local operations from the action rail.</p>
+        </div>
+        <div class="mini-actions">
           <a class="button" href="/">Refresh</a>
           <a class="button" href="/api/environments">Open JSON API</a>
         </div>
       </div>
-
-      <div class="panel">
-        <h2>Operator Actions</h2>
-        <p>These buttons run safe, whitelisted local actions. The console does not expose arbitrary shell access.</p>
-        <div class="actions">
-          <form method="post" action="/action"><input type="hidden" name="action" value="doctor"><button type="submit">Run Doctor</button></form>
-          <form method="post" action="/action"><input type="hidden" name="action" value="diagnose-operator"><button type="submit">Diagnose Operator</button></form>
-          <form method="post" action="/action"><input type="hidden" name="action" value="operator-logs"><button type="submit">Tail Operator Logs</button></form>
-          <form method="post" action="/action"><input type="hidden" name="action" value="apply-basic"><button type="submit">Apply Basic Example</button></form>
+      <div class="toolbar-grid">
+        <div class="search-wrap">
+          <label for="env-filter">Search environments</label>
+          <input id="env-filter" type="search" placeholder="Search by name, namespace, or phase" autocomplete="off">
+        </div>
+        <div class="search-wrap">
+          <label for="phase-filter">Filter by phase</label>
+          <select id="phase-filter">
+            <option value="">All phases</option>
+            <option value="running">Running</option>
+            <option value="paused">Paused</option>
+            <option value="failed">Failed</option>
+            <option value="degraded">Degraded</option>
+            <option value="configuring">Configuring</option>
+            <option value="restoring">Restoring</option>
+            <option value="deleting">Deleting</option>
+          </select>
         </div>
       </div>
     </section>
 
-    <section class="panel" style="margin-top:18px;">
-      <h2>Operator Pods</h2>
-      <ul class="list">
-        {{range .OperatorPods}}
-        <li><strong>{{.Name}}</strong> phase={{.Status}} node={{.Node}}</li>
-        {{end}}
-      </ul>
-    </section>
+    <section class="workspace">
+      <aside class="sidebar">
+        <section class="panel">
+          <h2>Operator Actions</h2>
+          <p class="footnote">These actions are explicit and local. They use safe Shukra workflows instead of exposing free-form command execution.</p>
+          <div class="actions">
+            <form method="post" action="/action"><input type="hidden" name="action" value="doctor"><button type="submit">Run Doctor</button></form>
+            <form method="post" action="/action"><input type="hidden" name="action" value="diagnose-operator"><button type="submit">Diagnose Operator</button></form>
+            <form method="post" action="/action"><input type="hidden" name="action" value="operator-logs"><button type="submit">Tail Operator Logs</button></form>
+            <form method="post" action="/action"><input type="hidden" name="action" value="apply-basic"><button type="submit">Apply Basic Example</button></form>
+          </div>
+        </section>
 
-    <section class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Environment</th>
-            <th>Phase</th>
-            <th>Ready</th>
-            <th>Failures</th>
-            <th>URL</th>
-            <th>Last success</th>
-          </tr>
-        </thead>
-        <tbody>
+        <section class="panel">
+          <h2>Operator Pods</h2>
+          <ul class="list operator-list">
+            {{range .OperatorPods}}
+            <li><strong>{{.Name}}</strong><br>phase={{.Status}}<br>node={{.Node}}</li>
+            {{end}}
+          </ul>
+        </section>
+
+        <section class="jump-list">
+          <h3>Jump to Environment</h3>
+          <div class="jump-links">
+            {{range .Items}}
+            <a href="#{{.AnchorID}}">{{.Namespace}} / {{.Name}}</a>
+            {{end}}
+          </div>
+        </section>
+      </aside>
+
+      <div>
+        <section class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Environment</th>
+                <th>Phase</th>
+                <th>Ready</th>
+                <th>Failures</th>
+                <th>URL</th>
+                <th>Last success</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Items}}
+              <tr class="env-row" data-name="{{.Name}}" data-namespace="{{.Namespace}}" data-phase="{{.Phase}}">
+                <td><a class="row-link" href="#{{.AnchorID}}">{{.Name}}</a><div class="card-ns">{{.Namespace}}</div></td>
+                <td><span class="phase">{{.Phase}}</span></td>
+                <td>{{.Ready}}</td>
+                <td>{{.FailureCount}}</td>
+                <td>{{.URL}}</td>
+                <td>{{.LastSuccess}}</td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </section>
+
+        <section class="cards">
           {{range .Items}}
-          <tr>
-            <td><strong>{{.Name}}</strong><div>{{.Namespace}}</div></td>
-            <td><span class="phase">{{.Phase}}</span></td>
-            <td>{{.Ready}}</td>
-            <td>{{.FailureCount}}</td>
-            <td>{{.URL}}</td>
-            <td>{{.LastSuccess}}</td>
-          </tr>
+          <article class="card env-card" id="{{.AnchorID}}" data-name="{{.Name}}" data-namespace="{{.Namespace}}" data-phase="{{.Phase}}">
+            <div class="card-head">
+              <div>
+                <div class="card-name">{{.Name}}</div>
+                <div class="card-ns">{{.Namespace}}</div>
+              </div>
+              <div class="phase">{{.Phase}}</div>
+            </div>
+
+            <div class="meta">
+              <div class="meta-box"><strong>Ready</strong>{{.Ready}}</div>
+              <div class="meta-box"><strong>Failure count</strong>{{.FailureCount}}</div>
+              <div class="meta-box"><strong>URL</strong>{{.URL}}</div>
+              <div class="meta-box"><strong>Last error</strong>{{.LastError}}</div>
+            </div>
+
+            <h3>Environment Actions</h3>
+            <div class="actions">
+              <form method="post" action="/action">
+                <input type="hidden" name="action" value="diagnose-env">
+                <input type="hidden" name="namespace" value="{{.Namespace}}">
+                <input type="hidden" name="name" value="{{.Name}}">
+                <button type="submit">Diagnose</button>
+              </form>
+              <form method="post" action="/action">
+                <input type="hidden" name="action" value="pause-env">
+                <input type="hidden" name="namespace" value="{{.Namespace}}">
+                <input type="hidden" name="name" value="{{.Name}}">
+                <button type="submit">Pause</button>
+              </form>
+              <form method="post" action="/action">
+                <input type="hidden" name="action" value="resume-env">
+                <input type="hidden" name="namespace" value="{{.Namespace}}">
+                <input type="hidden" name="name" value="{{.Name}}">
+                <button type="submit">Resume</button>
+              </form>
+              <form method="post" action="/action">
+                <input type="hidden" name="action" value="delete-env">
+                <input type="hidden" name="namespace" value="{{.Namespace}}">
+                <input type="hidden" name="name" value="{{.Name}}">
+                <button type="submit" style="border-color: var(--danger); color: var(--danger);">Delete</button>
+              </form>
+            </div>
+
+            <h3 style="margin-top:18px;">Managed Resources</h3>
+            <ul class="list">
+              {{range .Resources}}<li>{{.}}</li>{{end}}
+            </ul>
+
+            <h3 style="margin-top:18px;">Conditions</h3>
+            <div class="conditions">
+              {{range .Conditions}}
+              <div class="condition">
+                <div><strong class="type">{{.Type}}</strong> {{.Status}}</div>
+                <div class="reason">Reason: {{.Reason}}</div>
+                <div class="message">{{.Message}}</div>
+              </div>
+              {{end}}
+            </div>
+          </article>
           {{end}}
-        </tbody>
-      </table>
+        </section>
+      </div>
     </section>
 
-    <section class="cards">
-      {{range .Items}}
-      <article class="card">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-          <div>
-            <div style="font-size:24px;font-weight:700;">{{.Name}}</div>
-            <div>{{.Namespace}}</div>
-          </div>
-          <div class="phase">{{.Phase}}</div>
-        </div>
-
-        <div class="meta">
-          <div class="meta-box"><strong>Ready</strong>{{.Ready}}</div>
-          <div class="meta-box"><strong>Failure count</strong>{{.FailureCount}}</div>
-          <div class="meta-box"><strong>URL</strong>{{.URL}}</div>
-          <div class="meta-box"><strong>Last error</strong>{{.LastError}}</div>
-        </div>
-
-        <h3>Environment Actions</h3>
-        <div class="actions">
-          <form method="post" action="/action">
-            <input type="hidden" name="action" value="diagnose-env">
-            <input type="hidden" name="namespace" value="{{.Namespace}}">
-            <input type="hidden" name="name" value="{{.Name}}">
-            <button type="submit">Diagnose</button>
-          </form>
-          <form method="post" action="/action">
-            <input type="hidden" name="action" value="pause-env">
-            <input type="hidden" name="namespace" value="{{.Namespace}}">
-            <input type="hidden" name="name" value="{{.Name}}">
-            <button type="submit">Pause</button>
-          </form>
-          <form method="post" action="/action">
-            <input type="hidden" name="action" value="resume-env">
-            <input type="hidden" name="namespace" value="{{.Namespace}}">
-            <input type="hidden" name="name" value="{{.Name}}">
-            <button type="submit">Resume</button>
-          </form>
-          <form method="post" action="/action">
-            <input type="hidden" name="action" value="delete-env">
-            <input type="hidden" name="namespace" value="{{.Namespace}}">
-            <input type="hidden" name="name" value="{{.Name}}">
-            <button type="submit">Delete</button>
-          </form>
-        </div>
-
-        <h3 style="margin-top:18px;">Managed Resources</h3>
-        <ul class="list">
-          {{range .Resources}}<li>{{.}}</li>{{end}}
-        </ul>
-
-        <h3 style="margin-top:18px;">Conditions</h3>
-        <div class="conditions">
-          {{range .Conditions}}
-          <div class="condition">
-            <div><strong class="type">{{.Type}}</strong> {{.Status}}</div>
-            <div class="reason">Reason: {{.Reason}}</div>
-            <div class="message">{{.Message}}</div>
-          </div>
-          {{end}}
-        </div>
-      </article>
-      {{end}}
-    </section>
-
-    <div class="footer">The console is intentionally bound to localhost because it uses your local kube credentials and allows only safe, whitelisted Shukra actions.</div>
+    <div class="footer">The console is bound to localhost because it uses your local kube credentials and intentionally limits browser actions to safe Shukra operations.</div>
   </div>
+  <script>
+    (() => {
+      const searchInput = document.getElementById("env-filter");
+      const phaseSelect = document.getElementById("phase-filter");
+      const rows = Array.from(document.querySelectorAll(".env-row"));
+      const cards = Array.from(document.querySelectorAll(".env-card"));
+
+      function matches(el, search, phase) {
+        const haystack = [
+          el.dataset.name || "",
+          el.dataset.namespace || "",
+          el.dataset.phase || ""
+        ].join(" ").toLowerCase();
+        const phaseValue = (el.dataset.phase || "").toLowerCase();
+        const searchOk = search === "" || haystack.includes(search);
+        const phaseOk = phase === "" || phaseValue === phase;
+        return searchOk && phaseOk;
+      }
+
+      function applyFilters() {
+        const search = (searchInput.value || "").trim().toLowerCase();
+        const phase = (phaseSelect.value || "").trim().toLowerCase();
+
+        rows.forEach((row) => {
+          row.style.display = matches(row, search, phase) ? "" : "none";
+        });
+        cards.forEach((card) => {
+          card.style.display = matches(card, search, phase) ? "" : "none";
+        });
+      }
+
+      searchInput.addEventListener("input", applyFilters);
+      phaseSelect.addEventListener("change", applyFilters);
+      applyFilters();
+    })();
+  </script>
 </body>
 </html>`))
 
