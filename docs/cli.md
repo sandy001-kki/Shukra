@@ -143,18 +143,24 @@ What the console includes today:
 - environment table and per-environment cards
 - operator pod status
 - JSON API at `/api/environments`
-- safe action buttons for:
+- a browser Command Center for safe terminal-backed command profiles
+- safe action buttons and command profiles for:
   - `doctor`
   - operator diagnosis
   - operator logs
   - apply basic example
+  - cluster AppEnvironment listing
+  - node listing
+  - namespace pods, services, ConfigMaps, jobs, and CronJobs
+  - environment summary, YAML, describe, and managed-resource listing
   - environment diagnosis
   - pause
   - resume
   - delete
 
 The console does not provide arbitrary shell access from the browser. It runs
-only whitelisted local Shukra actions and returns their output in the page.
+only whitelisted local Shukra and `kubectl` actions and returns their output in
+the page.
 
 ## Core commands
 

@@ -65,6 +65,7 @@ type consolePage struct {
 	OperatorNamespace string
 	LocalhostAddress  string
 	OperatorPods      []consoleOperatorPod
+	CommandProfiles   []consoleCommandProfile
 	Items             []consoleEnvironment
 }
 
@@ -74,6 +75,13 @@ type consoleActionPage struct {
 	Command     string
 	Output      string
 	Success     bool
+}
+
+type consoleCommandProfile struct {
+	Key         string
+	Label       string
+	Description string
+	NeedsTarget bool
 }
 
 func newConsoleCommand(opts *RootOptions) *cobra.Command {
@@ -148,6 +156,28 @@ func newConsoleCommand(opts *RootOptions) *cobra.Command {
 	return cmd
 }
 
+func consoleCommandProfiles() []consoleCommandProfile {
+	return []consoleCommandProfile{
+		{Key: "doctor", Label: "Run Doctor", Description: "Check Docker, kubectl, helm, CRDs, operator Pods, and cert-manager."},
+		{Key: "diagnose-operator", Label: "Diagnose Operator", Description: "Show operator Pod health and placement."},
+		{Key: "operator-logs", Label: "Tail Operator Logs", Description: "Fetch the latest controller logs."},
+		{Key: "apply-basic", Label: "Apply Basic Example", Description: "Apply examples/basic.yaml to the current cluster."},
+		{Key: "cluster-appenvs", Label: "List AppEnvironments", Description: "Run kubectl get appenvironments across namespaces."},
+		{Key: "cluster-nodes", Label: "List Cluster Nodes", Description: "Inspect Kubernetes nodes and scheduling state."},
+		{Key: "namespace-pods", Label: "List Namespace Pods", Description: "Show pods in the selected namespace."},
+		{Key: "namespace-services", Label: "List Services and ConfigMaps", Description: "Show service and config objects in the selected namespace."},
+		{Key: "namespace-jobs", Label: "List Jobs and CronJobs", Description: "Show batch resources in the selected namespace."},
+		{Key: "env-summary", Label: "Environment Summary", Description: "Show phase, readiness, failures, and conditions for one AppEnvironment.", NeedsTarget: true},
+		{Key: "env-yaml", Label: "Get Environment YAML", Description: "Print the AppEnvironment resource as YAML.", NeedsTarget: true},
+		{Key: "env-describe", Label: "Describe Environment", Description: "Run kubectl describe against one AppEnvironment.", NeedsTarget: true},
+		{Key: "env-resources", Label: "List Managed Resources", Description: "Show deploy, svc, cm, ingress, HPA, jobs, CronJobs, network policies, and PDBs for the namespace.", NeedsTarget: true},
+		{Key: "diagnose-env", Label: "Diagnose Environment", Description: "Run the focused Shukra diagnosis view for one environment.", NeedsTarget: true},
+		{Key: "pause-env", Label: "Pause Environment", Description: "Set spec.paused=true on one AppEnvironment.", NeedsTarget: true},
+		{Key: "resume-env", Label: "Resume Environment", Description: "Set spec.paused=false on one AppEnvironment.", NeedsTarget: true},
+		{Key: "delete-env", Label: "Delete Environment", Description: "Delete one AppEnvironment and let finalizers clean up.", NeedsTarget: true},
+	}
+}
+
 func buildConsolePage(ctx context.Context, opts *RootOptions, addr string) (*consolePage, error) {
 	kubeClient, _, err := buildClient(ctx, opts)
 	if err != nil {
@@ -166,6 +196,7 @@ func buildConsolePage(ctx context.Context, opts *RootOptions, addr string) (*con
 		Namespace:         opts.Namespace,
 		OperatorNamespace: "shukra-system",
 		LocalhostAddress:  addr,
+		CommandProfiles:   consoleCommandProfiles(),
 	}
 
 	for _, item := range list.Items {
@@ -269,28 +300,93 @@ func executeConsoleAction(ctx context.Context, opts *RootOptions, actionType, na
 		output, err := runKubectlCapture(ctx, opts, "apply", "-f", "examples/basic.yaml")
 		result.Output = output
 		result.Success = err == nil
+	case "cluster-appenvs":
+		result.Title = "List AppEnvironments"
+		result.Command = "kubectl get appenvironments.apps.shukra.io -A -o wide"
+		output, err := runKubectlCapture(ctx, opts, "get", "appenvironments.apps.shukra.io", "-A", "-o", "wide")
+		result.Output = output
+		result.Success = err == nil
+	case "cluster-nodes":
+		result.Title = "List Cluster Nodes"
+		result.Command = "kubectl get nodes -o wide"
+		output, err := runKubectlCapture(ctx, opts, "get", "nodes", "-o", "wide")
+		result.Output = output
+		result.Success = err == nil
+	case "namespace-pods":
+		ns := consoleNamespaceOrDefault(namespace, opts)
+		result.Title = fmt.Sprintf("List Pods in %s", ns)
+		result.Command = fmt.Sprintf("kubectl get pods -n %s -o wide", ns)
+		output, err := runKubectlCapture(ctx, opts, "get", "pods", "-n", ns, "-o", "wide")
+		result.Output = output
+		result.Success = err == nil
+	case "namespace-services":
+		ns := consoleNamespaceOrDefault(namespace, opts)
+		result.Title = fmt.Sprintf("List Services and ConfigMaps in %s", ns)
+		result.Command = fmt.Sprintf("kubectl get svc,cm -n %s", ns)
+		output, err := runKubectlCapture(ctx, opts, "get", "svc,cm", "-n", ns)
+		result.Output = output
+		result.Success = err == nil
+	case "namespace-jobs":
+		ns := consoleNamespaceOrDefault(namespace, opts)
+		result.Title = fmt.Sprintf("List Jobs and CronJobs in %s", ns)
+		result.Command = fmt.Sprintf("kubectl get jobs,cronjobs -n %s", ns)
+		output, err := runKubectlCapture(ctx, opts, "get", "jobs,cronjobs", "-n", ns)
+		result.Output = output
+		result.Success = err == nil
+	case "env-summary":
+		ns := consoleNamespaceOrDefault(namespace, opts)
+		result.Title = fmt.Sprintf("Environment Summary %s/%s", ns, name)
+		result.Command = fmt.Sprintf("shukra diagnose env %s -n %s", name, ns)
+		output, err := diagnoseEnvironmentOutput(ctx, opts, ns, name)
+		result.Output = output
+		result.Success = err == nil
+	case "env-yaml":
+		ns := consoleNamespaceOrDefault(namespace, opts)
+		result.Title = fmt.Sprintf("Environment YAML %s/%s", ns, name)
+		result.Command = fmt.Sprintf("kubectl get appenvironment %s -n %s -o yaml", name, ns)
+		output, err := runKubectlCapture(ctx, opts, "get", "appenvironment", name, "-n", ns, "-o", "yaml")
+		result.Output = output
+		result.Success = err == nil
+	case "env-describe":
+		ns := consoleNamespaceOrDefault(namespace, opts)
+		result.Title = fmt.Sprintf("Describe Environment %s/%s", ns, name)
+		result.Command = fmt.Sprintf("kubectl describe appenvironment %s -n %s", name, ns)
+		output, err := runKubectlCapture(ctx, opts, "describe", "appenvironment", name, "-n", ns)
+		result.Output = output
+		result.Success = err == nil
+	case "env-resources":
+		ns := consoleNamespaceOrDefault(namespace, opts)
+		result.Title = fmt.Sprintf("Managed Resources in %s for %s", ns, name)
+		result.Command = fmt.Sprintf("kubectl get deploy,svc,cm,ingress,hpa,jobs,cronjobs,networkpolicies,poddisruptionbudgets -n %s", ns)
+		output, err := runKubectlCapture(ctx, opts, "get", "deploy,svc,cm,ingress,hpa,jobs,cronjobs,networkpolicies,poddisruptionbudgets", "-n", ns)
+		result.Output = output
+		result.Success = err == nil
 	case "diagnose-env":
-		result.Title = fmt.Sprintf("Diagnose %s/%s", namespace, name)
-		result.Command = fmt.Sprintf("shukra diagnose env %s -n %s", name, namespace)
-		output, err := diagnoseEnvironmentOutput(ctx, opts, namespace, name)
+		ns := consoleNamespaceOrDefault(namespace, opts)
+		result.Title = fmt.Sprintf("Diagnose %s/%s", ns, name)
+		result.Command = fmt.Sprintf("shukra diagnose env %s -n %s", name, ns)
+		output, err := diagnoseEnvironmentOutput(ctx, opts, ns, name)
 		result.Output = output
 		result.Success = err == nil
 	case "pause-env":
-		result.Title = fmt.Sprintf("Pause %s/%s", namespace, name)
-		result.Command = fmt.Sprintf("shukra env pause %s -n %s", name, namespace)
-		output, err := mutateEnvironmentPause(ctx, opts, namespace, name, true)
+		ns := consoleNamespaceOrDefault(namespace, opts)
+		result.Title = fmt.Sprintf("Pause %s/%s", ns, name)
+		result.Command = fmt.Sprintf("shukra env pause %s -n %s", name, ns)
+		output, err := mutateEnvironmentPause(ctx, opts, ns, name, true)
 		result.Output = output
 		result.Success = err == nil
 	case "resume-env":
-		result.Title = fmt.Sprintf("Resume %s/%s", namespace, name)
-		result.Command = fmt.Sprintf("shukra env resume %s -n %s", name, namespace)
-		output, err := mutateEnvironmentPause(ctx, opts, namespace, name, false)
+		ns := consoleNamespaceOrDefault(namespace, opts)
+		result.Title = fmt.Sprintf("Resume %s/%s", ns, name)
+		result.Command = fmt.Sprintf("shukra env resume %s -n %s", name, ns)
+		output, err := mutateEnvironmentPause(ctx, opts, ns, name, false)
 		result.Output = output
 		result.Success = err == nil
 	case "delete-env":
-		result.Title = fmt.Sprintf("Delete %s/%s", namespace, name)
-		result.Command = fmt.Sprintf("shukra env delete %s -n %s", name, namespace)
-		output, err := deleteEnvironment(ctx, opts, namespace, name)
+		ns := consoleNamespaceOrDefault(namespace, opts)
+		result.Title = fmt.Sprintf("Delete %s/%s", ns, name)
+		result.Command = fmt.Sprintf("shukra env delete %s -n %s", name, ns)
+		output, err := deleteEnvironment(ctx, opts, ns, name)
 		result.Output = output
 		result.Success = err == nil
 	default:
@@ -468,6 +564,17 @@ func formatConsoleTime(value *metav1.Time) string {
 		return "-"
 	}
 	return value.Time.Format("2006-01-02 15:04:05 MST")
+}
+
+func consoleNamespaceOrDefault(namespace string, opts *RootOptions) string {
+	namespace = strings.TrimSpace(namespace)
+	if namespace != "" {
+		return namespace
+	}
+	if strings.TrimSpace(opts.Namespace) != "" {
+		return opts.Namespace
+	}
+	return "default"
 }
 
 func consoleAnchorID(namespace, name string) string {
@@ -849,9 +956,9 @@ var consoleTemplate = template.Must(template.New("console").Parse(`<!doctype htm
 Address: {{.LocalhostAddress}}
 JSON API: /api/environments
 
-Browser actions are whitelisted.
-No arbitrary shell is exposed.
-This UI is for local operator work.</pre>
+Browser actions are terminal-backed.
+Commands stay whitelisted and local.
+This UI is for trusted operator work.</pre>
         </div>
       </div>
     </section>
@@ -892,7 +999,7 @@ This UI is for local operator work.</pre>
       <aside class="sidebar">
         <section class="panel">
           <h2>Operator Actions</h2>
-          <p class="footnote">These actions are explicit and local. They use safe Shukra workflows instead of exposing free-form command execution.</p>
+          <p class="footnote">These actions are explicit and local. They execute whitelisted Shukra and kubectl workflows and return the command output in the browser.</p>
           <div class="actions">
             <form method="post" action="/action"><input type="hidden" name="action" value="doctor"><button type="submit">Run Doctor</button></form>
             <form method="post" action="/action"><input type="hidden" name="action" value="diagnose-operator"><button type="submit">Diagnose Operator</button></form>
@@ -921,6 +1028,41 @@ This UI is for local operator work.</pre>
       </aside>
 
       <div>
+        <section class="panel" style="margin-bottom:18px;">
+          <div class="section-head">
+            <div>
+              <h2>Command Center</h2>
+              <p>Run safe terminal-backed operations from the browser. Pick a command profile, optionally target an environment, and Shukra will execute the matching local workflow.</p>
+            </div>
+          </div>
+          <form method="post" action="/action">
+            <div class="toolbar-grid">
+              <div class="search-wrap">
+                <label for="command-profile">Command profile</label>
+                <select id="command-profile" name="action">
+                  {{range .CommandProfiles}}
+                  <option value="{{.Key}}" data-needs-target="{{if .NeedsTarget}}true{{else}}false{{end}}">{{.Label}} — {{.Description}}</option>
+                  {{end}}
+                </select>
+              </div>
+              <div class="search-wrap">
+                <label for="command-namespace">Namespace</label>
+                <input id="command-namespace" name="namespace" type="text" placeholder="default" value="{{if .Namespace}}{{.Namespace}}{{else}}default{{end}}">
+              </div>
+            </div>
+            <div class="toolbar-grid" style="margin-top:12px;">
+              <div class="search-wrap">
+                <label for="command-name">Environment name</label>
+                <input id="command-name" name="name" type="text" placeholder="basic-app">
+              </div>
+              <div class="search-wrap" style="display:flex; align-items:end;">
+                <button type="submit" style="width:100%;">Run Command</button>
+              </div>
+            </div>
+            <p class="footnote" id="command-help" style="margin-top:12px;">Tip: choose an environment-aware command such as Environment Summary, Diagnose Environment, Pause, Resume, or Delete when you want browser-driven control over a specific AppEnvironment.</p>
+          </form>
+        </section>
+
         <section class="table-wrap">
           <table>
             <thead>
@@ -1015,12 +1157,16 @@ This UI is for local operator work.</pre>
       </div>
     </section>
 
-    <div class="footer">The console is bound to localhost because it uses your local kube credentials and intentionally limits browser actions to safe Shukra operations.</div>
+    <div class="footer">The console is bound to localhost because it uses your local kube credentials and intentionally limits browser actions to safe terminal-backed Shukra operations instead of exposing a remote shell.</div>
   </div>
   <script>
     (() => {
       const searchInput = document.getElementById("env-filter");
       const phaseSelect = document.getElementById("phase-filter");
+      const commandProfile = document.getElementById("command-profile");
+      const commandNamespace = document.getElementById("command-namespace");
+      const commandName = document.getElementById("command-name");
+      const commandHelp = document.getElementById("command-help");
       const rows = Array.from(document.querySelectorAll(".env-row"));
       const cards = Array.from(document.querySelectorAll(".env-card"));
 
@@ -1050,6 +1196,21 @@ This UI is for local operator work.</pre>
 
       searchInput.addEventListener("input", applyFilters);
       phaseSelect.addEventListener("change", applyFilters);
+
+      function syncCommandState() {
+        if (!commandProfile) return;
+        const selected = commandProfile.options[commandProfile.selectedIndex];
+        const needsTarget = selected && selected.dataset.needsTarget === "true";
+        commandName.disabled = !needsTarget;
+        commandName.placeholder = needsTarget ? "basic-app" : "Not required for this command";
+        commandName.style.opacity = needsTarget ? "1" : ".55";
+        commandHelp.textContent = needsTarget
+          ? "This command profile targets a single AppEnvironment. Provide the namespace and environment name before running it."
+          : "This command profile works at operator, namespace, or cluster scope. Namespace defaults to the current workspace if you leave it empty.";
+      }
+
+      commandProfile.addEventListener("change", syncCommandState);
+      syncCommandState();
       applyFilters();
     })();
   </script>

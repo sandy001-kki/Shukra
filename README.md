@@ -385,12 +385,12 @@ http://127.0.0.1:8088
 
 The console is intentionally simple and local-first. It gives users:
 
-- a white-background, black-text browser dashboard
+- a local browser operations console with environment overview, operator health, and a command center
 - an environment table with phase, readiness, failure count, URL, and last success
 - operator pod visibility
 - full condition breakdown for each `AppEnvironment`
 - a JSON API at `/api/environments`
-- safe browser-triggered actions for doctor, operator diagnosis, operator logs, apply basic example, diagnose env, pause, resume, and delete
+- safe browser-triggered terminal-backed actions for doctor, operator diagnosis, operator logs, apply basic example, environment summary, YAML fetch, describe, resource listing, diagnose env, pause, resume, and delete
 
 ### Why localhost only
 
@@ -409,8 +409,9 @@ In simple terms: the browser is the UI, but your machine remains the trusted
 execution boundary.
 
 The console does not expose raw unrestricted terminal access. Instead, it runs
-only a small whitelist of Shukra-specific local actions that are useful in
-daily operations.
+a broader but still explicit whitelist of local Shukra and `kubectl` command
+profiles through the browser so users can control real operational workflows
+without turning the page into an unsafe remote shell.
 
 ## Shukra AI roadmap
 
