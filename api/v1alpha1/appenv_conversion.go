@@ -60,6 +60,7 @@ func (src *AppEnvironment) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.Autoscaling = appsv1beta1.AutoscalingSpec(src.Spec.Autoscaling)
 	dst.Spec.Backup = appsv1beta1.BackupSpec(src.Spec.Backup)
 	dst.Spec.Restore = appsv1beta1.RestoreSpec(src.Spec.Restore)
+	dst.Spec.Intent = nil
 	if src.Spec.Security.NetworkPolicy {
 		dst.Spec.Security.NetworkPolicy = appsv1beta1.NetworkPolicySpec{
 			IngressRules: []networkingv1.NetworkPolicyIngressRule{{}},
@@ -81,6 +82,8 @@ func (src *AppEnvironment) ConvertTo(dstRaw conversion.Hub) error {
 		LastSuccessfulReconcileTime: src.Status.LastSuccessfulReconcileTime,
 		LastAppliedSpecHash:         src.Status.LastAppliedSpecHash,
 		Conditions:                  src.Status.Conditions,
+		IntentHealth:                nil,
+		PatchHistory:                nil,
 	}
 	return nil
 }

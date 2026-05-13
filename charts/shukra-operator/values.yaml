@@ -32,3 +32,26 @@ metrics:
 serviceAccount:
   create: true
   name: shukra-operator
+bridge:
+  enabled: true
+  replicaCount: 1
+  aionosEndpoint: ""
+  apiKey: ""
+  image:
+    repository: ghcr.io/sandy001-kki/shukra-operator
+    tag: latest
+    pullPolicy: IfNotPresent
+  grpcPort: 50051
+  metricsPort: 8080
+  tls:
+    secretName: shukra-bridge-tls
+    clientCASecretName: shukra-bridge-tls
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+shadow:
+  namespace: aionos-shadow

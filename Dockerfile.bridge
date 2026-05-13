@@ -1,16 +1,13 @@
-# This Dockerfile builds the controller manager with a multi-stage pipeline and
-# runs it as a non-root distroless image for production-safe deployment.
+# This Dockerfile builds only the Shukra AIONOS bridge.
 
 FROM golang:1.21 AS builder
 WORKDIR /workspace
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o manager cmd/main.go
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o shukra-bridge cmd/shukra-bridge/main.go
 
 FROM gcr.io/distroless/static:nonroot
-COPY --from=builder /workspace/manager /manager
 COPY --from=builder /workspace/shukra-bridge /shukra-bridge
 USER 65532:65532
-ENTRYPOINT ["/manager"]
+ENTRYPOINT ["/shukra-bridge"]

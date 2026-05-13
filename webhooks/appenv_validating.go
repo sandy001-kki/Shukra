@@ -80,6 +80,7 @@ func (v *AppEnvironmentValidator) validate(ctx context.Context, appEnv *appsv1be
 	if appEnv.Spec.Security.PodDisruptionBudget.MinAvailable != nil && appEnv.Spec.Security.PodDisruptionBudget.MaxUnavailable != nil {
 		allErrs = append(allErrs, field.Invalid(specPath.Child("security", "podDisruptionBudget"), "both set", "only one of minAvailable or maxUnavailable may be set"))
 	}
+	allErrs = append(allErrs, validateIntent(specPath.Child("intent"), appEnv.Spec.Intent)...)
 	for _, ref := range appEnv.Spec.App.SecretRefs {
 		if strings.Contains(ref.Name, "/") {
 			allErrs = append(allErrs, field.Invalid(specPath.Child("app", "secretRefs"), ref.Name, "cross-namespace secret references are not allowed"))
@@ -103,6 +104,35 @@ func (v *AppEnvironmentValidator) validate(ctx context.Context, appEnv *appsv1be
 		return apierrors.NewInvalid(appsv1beta1.GroupVersion.WithKind("AppEnvironment").GroupKind(), appEnv.Name, allErrs)
 	}
 	return nil
+}
+
+func validateIntent(path *field.Path, intent *appsv1beta1.IntentSpec) field.ErrorList {
+	var errs field.ErrorList
+	if intent == nil {
+		return errs
+	}
+	if intent.Performance != nil {
+		if intent.Performance.LatencyP99Ms != nil && *intent.Performance.LatencyP99Ms <= 0 {
+			errs = append(errs, field.Invalid(path.Child("performance", "latencyP99Ms"), *intent.Performance.LatencyP99Ms, "must be > 0"))
+		}
+		if intent.Performance.ErrorRatePct != nil && (*intent.Performance.ErrorRatePct < 0 || *intent.Performance.ErrorRatePct > 100) {
+			errs = append(errs, field.Invalid(path.Child("performance", "errorRatePct"), *intent.Performance.ErrorRatePct, "must be between 0 and 100"))
+		}
+	}
+	if intent.Reliability != nil && intent.Reliability.AvailabilityPct != nil && (*intent.Reliability.AvailabilityPct < 0 || *intent.Reliability.AvailabilityPct > 100) {
+		errs = append(errs, field.Invalid(path.Child("reliability", "availabilityPct"), *intent.Reliability.AvailabilityPct, "must be between 0 and 100"))
+	}
+	if intent.Cost != nil && intent.Cost.MaxUSDPerHour != nil && *intent.Cost.MaxUSDPerHour <= 0 {
+		errs = append(errs, field.Invalid(path.Child("cost", "maxUsdPerHour"), *intent.Cost.MaxUSDPerHour, "must be > 0"))
+	}
+	if intent.Security != nil {
+		for i, domain := range intent.Security.AllowedEgressDomains {
+			if !hostRegex.MatchString(domain) {
+				errs = append(errs, field.Invalid(path.Child("security", "allowedEgressDomains").Index(i), domain, "must be a valid domain name"))
+			}
+		}
+	}
+	return errs
 }
 
 func validateResourceBounds(path *field.Path, resources corev1.ResourceRequirements) field.ErrorList {

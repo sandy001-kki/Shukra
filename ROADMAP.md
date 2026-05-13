@@ -11,8 +11,16 @@ operability, or production readiness for real Kubernetes users.
 - Improve migration and restore status tracking with richer Job condition handling
 - Add a `SECURITY.md` driven disclosure process to the release notes and docs
 - Add more CI checks for webhook conversion and upgrade flows
-- Improve conflict retry handling in reconciliation to reduce transient update churn
 - Add release badges that surface the latest public image, chart, and CLI assets
+
+## Completed in v0.3.0
+
+- Added the AIONOS Bridge gRPC server for external bot integration
+- Added intent declarations and status-level intent health reporting
+- Added the AIONOS shadow namespace protocol with TTL cleanup
+- Added real pluggable cleanup hooks for database, backup, and DNS metadata
+- Improved conflict retry handling in reconciliation to reduce transient update churn
+- Added AIONOS metrics, events, and patch audit history
 
 ## Short term
 
@@ -26,7 +34,6 @@ operability, or production readiness for real Kubernetes users.
 ## Medium term
 
 - Introduce a `v1` API graduation plan with deprecation guidance
-- Add pluggable external integrations for backup and DNS cleanup clients
 - Add richer policy controls for ingress ownership and shared gateways
 - Support controlled rollout strategies for migrations and restore orchestration
 - Add stronger status summaries for backups, restores, and autoscaling health

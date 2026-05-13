@@ -1,0 +1,9 @@
+{{- if .Values.bridge.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.shadow.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: shukra-operator
+    aionos.io/shadow-namespace: "true"
+{{- end }}

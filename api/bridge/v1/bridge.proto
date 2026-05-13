@@ -1,0 +1,155 @@
+syntax = "proto3";
+package aionos.bridge.v1;
+option go_package = "github.com/sandy001-kki/Shukra/api/bridge/v1";
+
+service AionosBridge {
+  rpc StreamEnvironmentHealth(HealthStreamRequest) returns (stream HealthEvent);
+  rpc StreamReconcileEvents(ReconcileEventRequest) returns (stream ReconcileEvent);
+  rpc PatchEnvironment(PatchRequest) returns (PatchResult);
+  rpc CreateShadowEnvironment(ShadowCreateRequest) returns (ShadowResult);
+  rpc DeleteShadowEnvironment(ShadowDeleteRequest) returns (DeleteResult);
+  rpc StreamIntentViolations(IntentViolationRequest) returns (stream IntentViolationEvent);
+  rpc ListEnvironments(ListRequest) returns (EnvironmentList);
+  rpc GetEnvironment(GetRequest) returns (EnvironmentDetail);
+}
+
+message HealthStreamRequest {
+  string namespace = 1;
+  string name = 2;
+  int32 interval_seconds = 3;
+}
+
+message HealthEvent {
+  string name = 1;
+  string namespace = 2;
+  string phase = 3;
+  int32 ready_replicas = 4;
+  int32 desired_replicas = 5;
+  int32 failure_count = 6;
+  string last_error = 7;
+  repeated ConditionProto conditions = 8;
+  repeated IntentConditionProto intent_health = 9;
+  int64 timestamp_unix = 10;
+}
+
+message ReconcileEventRequest {
+  string namespace = 1;
+  string name = 2;
+}
+
+message ReconcileEvent {
+  string name = 1;
+  string namespace = 2;
+  string event_type = 3;
+  string resource_kind = 4;
+  string message = 5;
+  string error = 6;
+  int64 duration_ms = 7;
+  int64 timestamp_unix = 8;
+}
+
+message PatchRequest {
+  string name = 1;
+  string namespace = 2;
+  string patch_json = 3;
+  string patch_id = 4;
+  string reason = 5;
+  string applied_by = 6;
+}
+
+message PatchResult {
+  bool success = 1;
+  string error = 2;
+  string resource_version = 3;
+}
+
+message ShadowCreateRequest {
+  string source_name = 1;
+  string source_namespace = 2;
+  string patch_id = 3;
+  string image_override = 4;
+  string spec_patch_json = 5;
+  int32 ttl_seconds = 6;
+}
+
+message ShadowResult {
+  bool success = 1;
+  string shadow_name = 2;
+  string shadow_namespace = 3;
+  string error = 4;
+}
+
+message ShadowDeleteRequest {
+  string shadow_name = 1;
+  string shadow_namespace = 2;
+}
+
+message DeleteResult {
+  bool success = 1;
+  string error = 2;
+}
+
+message IntentViolationRequest {
+  string namespace = 1;
+  string name = 2;
+}
+
+message IntentViolationEvent {
+  string name = 1;
+  string namespace = 2;
+  string intent_type = 3;
+  string declared = 4;
+  string measured = 5;
+  string severity = 6;
+  int64 timestamp_unix = 7;
+}
+
+message ListRequest {
+  string namespace = 1;
+}
+
+message EnvironmentList {
+  repeated EnvironmentSummary environments = 1;
+}
+
+message EnvironmentSummary {
+  string name = 1;
+  string namespace = 2;
+  string phase = 3;
+  int32 failure_count = 4;
+  string last_error = 5;
+  int64 last_successful_reconcile_unix = 6;
+}
+
+message GetRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message EnvironmentDetail {
+  string name = 1;
+  string namespace = 2;
+  string phase = 3;
+  string spec_json = 4;
+  string status_json = 5;
+  repeated ConditionProto conditions = 6;
+  repeated IntentConditionProto intent_health = 7;
+  repeated string child_resources = 8;
+}
+
+message ConditionProto {
+  string type = 1;
+  string status = 2;
+  string reason = 3;
+  string message = 4;
+  int64 last_transition_unix = 5;
+}
+
+message IntentConditionProto {
+  string type = 1;
+  string status = 2;
+  string measured = 3;
+  string declared = 4;
+  string message = 5;
+  int64 last_check_unix = 6;
+}

@@ -2,6 +2,17 @@
 
 All notable changes to Shukra Operator should be documented in this file.
 
+## v0.3.0
+
+- added the AIONOS Bridge gRPC server as a separate `shukra-bridge` binary
+- added intent declarations to `AppEnvironment` spec and intent health in status
+- added the AIONOS shadow namespace protocol with TTL-based cleanup
+- replaced mock deletion cleanup with pluggable database, backup, and DNS hooks
+- hardened status updates and reconciliation paths for conflict retry
+- added AIONOS Prometheus metrics and Kubernetes events
+- added patch audit history in `AppEnvironment` status
+- added Helm resources for the bridge Deployment, Service, certificate, and shadow namespace
+
 ## v0.2.3
 
 - added `shukra doctor`

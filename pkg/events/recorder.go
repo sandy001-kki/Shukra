@@ -63,3 +63,23 @@ func (r Recorder) RecordUnpaused(obj runtime.Object) {
 func (r Recorder) RecordDeletionStarted(obj runtime.Object) {
 	r.recorder.Event(obj, corev1.EventTypeNormal, "DeletionStarted", "Deletion and finalizer cleanup started")
 }
+
+func (r Recorder) RecordAionosIntentViolated(obj runtime.Object, intentType string) {
+	r.recorder.Eventf(obj, corev1.EventTypeWarning, "AionosIntentViolated", "Intent %s is violated", intentType)
+}
+
+func (r Recorder) RecordAionosIntentSatisfied(obj runtime.Object, intentType string) {
+	r.recorder.Eventf(obj, corev1.EventTypeNormal, "AionosIntentSatisfied", "Intent %s is satisfied", intentType)
+}
+
+func (r Recorder) RecordAionosPatchApplied(obj runtime.Object, patchID, appliedBy string) {
+	r.recorder.Eventf(obj, corev1.EventTypeNormal, "AionosPatchApplied", "Patch %s applied by %s", patchID, appliedBy)
+}
+
+func (r Recorder) RecordAionosShadowCreated(obj runtime.Object) {
+	r.recorder.Event(obj, corev1.EventTypeNormal, "AionosShadowCreated", "Shadow environment created")
+}
+
+func (r Recorder) RecordAionosShadowExpired(obj runtime.Object) {
+	r.recorder.Event(obj, corev1.EventTypeNormal, "AionosShadowExpired", "Shadow environment TTL expired")
+}

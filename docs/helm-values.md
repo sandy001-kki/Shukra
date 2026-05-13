@@ -158,6 +158,38 @@ Recommended:
 
 The metrics service port.
 
+## AIONOS bridge
+
+### `bridge.enabled`
+
+Deploys the `shukra-bridge` gRPC server. Keep this enabled when AIONOS bots
+need to connect to Shukra.
+
+### `bridge.grpcPort`
+
+The gRPC port exposed by the bridge Service. The default is `50051`.
+
+### `bridge.aionosEndpoint`
+
+Optional endpoint metadata for clusters that also need to identify the AIONOS
+Core Brain address in the bridge Pod environment.
+
+### `bridge.apiKey`
+
+Optional API key material for AIONOS deployments that need an outbound
+credential. When set, the chart renders it into a Kubernetes Secret and mounts
+it through `AIONOS_API_KEY`.
+
+### `bridge.tls`
+
+Configures the cert-manager-backed TLS Secret used by the bridge. Production
+installs should keep client certificate verification enabled.
+
+### `shadow.namespace`
+
+The namespace used for AIONOS shadow environments. The default is
+`aionos-shadow`.
+
 ## Service account
 
 ### `serviceAccount.create`
@@ -200,7 +232,7 @@ Install with:
 
 ```bash
 helm upgrade --install shukra-operator oci://ghcr.io/sandy001-kki/charts/shukra-operator \
-  --version 0.2.3 \
+  --version 0.3.0 \
   -n shukra-system \
   --create-namespace \
   -f values-production.yaml

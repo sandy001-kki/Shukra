@@ -52,6 +52,7 @@ type AppEnvironmentSpec struct {
 	Backup      BackupSpec      `json:"backup,omitempty"`
 	Restore     RestoreSpec     `json:"restore,omitempty"`
 	Security    SecuritySpec    `json:"security,omitempty"`
+	Intent      *IntentSpec     `json:"intent,omitempty"`
 	Paused      bool            `json:"paused,omitempty"`
 }
 
@@ -62,19 +63,19 @@ type SecretRef struct {
 }
 
 type AppSpec struct {
-	Image                    string                      `json:"image"`
-	ImagePullPolicy          corev1.PullPolicy           `json:"imagePullPolicy,omitempty"`
-	Replicas                 *int32                      `json:"replicas,omitempty"`
-	ContainerPort            int32                       `json:"containerPort,omitempty"`
-	Env                      []corev1.EnvVar             `json:"env,omitempty"`
-	EnvFrom                  []corev1.EnvFromSource      `json:"envFrom,omitempty"`
-	SecretRefs               []SecretRef                 `json:"secretRefs,omitempty"`
-	Resources                corev1.ResourceRequirements `json:"resources,omitempty"`
-	Strategy                 appsv1.DeploymentStrategy   `json:"strategy,omitempty"`
-	LivenessProbe            *corev1.Probe               `json:"livenessProbe,omitempty"`
-	ReadinessProbe           *corev1.Probe               `json:"readinessProbe,omitempty"`
-	StartupProbe             *corev1.Probe               `json:"startupProbe,omitempty"`
-	ServiceAccountName       string                      `json:"serviceAccountName,omitempty"`
+	Image              string                      `json:"image"`
+	ImagePullPolicy    corev1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+	Replicas           *int32                      `json:"replicas,omitempty"`
+	ContainerPort      int32                       `json:"containerPort,omitempty"`
+	Env                []corev1.EnvVar             `json:"env,omitempty"`
+	EnvFrom            []corev1.EnvFromSource      `json:"envFrom,omitempty"`
+	SecretRefs         []SecretRef                 `json:"secretRefs,omitempty"`
+	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
+	Strategy           appsv1.DeploymentStrategy   `json:"strategy,omitempty"`
+	LivenessProbe      *corev1.Probe               `json:"livenessProbe,omitempty"`
+	ReadinessProbe     *corev1.Probe               `json:"readinessProbe,omitempty"`
+	StartupProbe       *corev1.Probe               `json:"startupProbe,omitempty"`
+	ServiceAccountName string                      `json:"serviceAccountName,omitempty"`
 }
 
 type ConfigSpec struct {
@@ -82,22 +83,22 @@ type ConfigSpec struct {
 }
 
 type ServiceSpec struct {
-	Enabled     *bool             `json:"enabled,omitempty"`
+	Enabled     *bool              `json:"enabled,omitempty"`
 	Type        corev1.ServiceType `json:"type,omitempty"`
-	Port        int32             `json:"port,omitempty"`
-	TargetPort  int32             `json:"targetPort,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty"`
+	Port        int32              `json:"port,omitempty"`
+	TargetPort  int32              `json:"targetPort,omitempty"`
+	Annotations map[string]string  `json:"annotations,omitempty"`
 }
 
 type IngressSpec struct {
-	Enabled                bool              `json:"enabled,omitempty"`
-	Host                   string            `json:"host,omitempty"`
-	Path                   string            `json:"path,omitempty"`
+	Enabled                bool                   `json:"enabled,omitempty"`
+	Host                   string                 `json:"host,omitempty"`
+	Path                   string                 `json:"path,omitempty"`
 	PathType               *networkingv1.PathType `json:"pathType,omitempty"`
-	ClassName              string            `json:"className,omitempty"`
-	TLSSecretName          string            `json:"tlsSecretName,omitempty"`
-	Annotations            map[string]string `json:"annotations,omitempty"`
-	AllowSharedIngressHost bool              `json:"allowSharedIngressHost,omitempty"`
+	ClassName              string                 `json:"className,omitempty"`
+	TLSSecretName          string                 `json:"tlsSecretName,omitempty"`
+	Annotations            map[string]string      `json:"annotations,omitempty"`
+	AllowSharedIngressHost bool                   `json:"allowSharedIngressHost,omitempty"`
 }
 
 type DatabaseSpec struct {
@@ -154,10 +155,37 @@ type PDBSpec struct {
 }
 
 type SecuritySpec struct {
-	NetworkPolicy            NetworkPolicySpec       `json:"networkPolicy,omitempty"`
-	PodDisruptionBudget      PDBSpec                 `json:"podDisruptionBudget,omitempty"`
+	NetworkPolicy            NetworkPolicySpec          `json:"networkPolicy,omitempty"`
+	PodDisruptionBudget      PDBSpec                    `json:"podDisruptionBudget,omitempty"`
 	PodSecurityContext       *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
-	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
+	ContainerSecurityContext *corev1.SecurityContext    `json:"containerSecurityContext,omitempty"`
+}
+
+type IntentSpec struct {
+	Performance *PerformanceIntent `json:"performance,omitempty"`
+	Reliability *ReliabilityIntent `json:"reliability,omitempty"`
+	Cost        *CostIntent        `json:"cost,omitempty"`
+	Security    *SecurityIntent    `json:"security,omitempty"`
+}
+
+type PerformanceIntent struct {
+	LatencyP99Ms  *int64   `json:"latencyP99Ms,omitempty"`
+	ErrorRatePct  *float64 `json:"errorRatePct,omitempty"`
+	ThroughputRPS *int64   `json:"throughputRps,omitempty"`
+}
+
+type ReliabilityIntent struct {
+	AvailabilityPct  *float64 `json:"availabilityPct,omitempty"`
+	MaxRestartsPer1h *int32   `json:"maxRestartsPer1h,omitempty"`
+}
+
+type CostIntent struct {
+	MaxUSDPerHour *float64 `json:"maxUsdPerHour,omitempty"`
+}
+
+type SecurityIntent struct {
+	RequireNetworkPolicy bool     `json:"requireNetworkPolicy,omitempty"`
+	AllowedEgressDomains []string `json:"allowedEgressDomains,omitempty"`
 }
 
 type ChildResources struct {
@@ -173,18 +201,37 @@ type ChildResources struct {
 	PDBName           string `json:"pdbName,omitempty"`
 }
 
+type IntentCondition struct {
+	Type      string      `json:"type"`
+	Status    string      `json:"status"`
+	Measured  string      `json:"measured"`
+	Declared  string      `json:"declared"`
+	Message   string      `json:"message"`
+	LastCheck metav1.Time `json:"lastCheck"`
+}
+
+type PatchRecord struct {
+	PatchID   string      `json:"patchId"`
+	AppliedBy string      `json:"appliedBy"`
+	Reason    string      `json:"reason"`
+	AppliedAt metav1.Time `json:"appliedAt"`
+	Result    string      `json:"result"`
+}
+
 type AppEnvironmentStatus struct {
-	Phase                      string             `json:"phase,omitempty"`
-	ObservedGeneration         int64              `json:"observedGeneration,omitempty"`
-	URL                        string             `json:"url,omitempty"`
-	ChildResources             ChildResources     `json:"childResources,omitempty"`
-	LastError                  string             `json:"lastError,omitempty"`
-	FailureCount               int32              `json:"failureCount,omitempty"`
-	LastAppliedMigrationID     string             `json:"lastAppliedMigrationID,omitempty"`
-	LastProcessedRestoreNonce  string             `json:"lastProcessedRestoreNonce,omitempty"`
-	LastSuccessfulReconcileTime *metav1.Time      `json:"lastSuccessfulReconcileTime,omitempty"`
-	LastAppliedSpecHash        string             `json:"lastAppliedSpecHash,omitempty"`
-	Conditions                 []metav1.Condition `json:"conditions,omitempty"`
+	Phase                       string             `json:"phase,omitempty"`
+	ObservedGeneration          int64              `json:"observedGeneration,omitempty"`
+	URL                         string             `json:"url,omitempty"`
+	ChildResources              ChildResources     `json:"childResources,omitempty"`
+	LastError                   string             `json:"lastError,omitempty"`
+	FailureCount                int32              `json:"failureCount,omitempty"`
+	LastAppliedMigrationID      string             `json:"lastAppliedMigrationID,omitempty"`
+	LastProcessedRestoreNonce   string             `json:"lastProcessedRestoreNonce,omitempty"`
+	LastSuccessfulReconcileTime *metav1.Time       `json:"lastSuccessfulReconcileTime,omitempty"`
+	LastAppliedSpecHash         string             `json:"lastAppliedSpecHash,omitempty"`
+	Conditions                  []metav1.Condition `json:"conditions,omitempty"`
+	IntentHealth                []IntentCondition  `json:"intentHealth,omitempty"`
+	PatchHistory                []PatchRecord      `json:"patchHistory,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -248,13 +295,20 @@ func (in *AppEnvironment) ImageTag() string {
 }
 
 func (in *AppEnvironment) Labels(component string) map[string]string {
-	return map[string]string{
+	labels := map[string]string{
 		"app.kubernetes.io/name":       in.Name,
 		"app.kubernetes.io/managed-by": "shukra-operator",
 		"app.kubernetes.io/component":  component,
 		"app.kubernetes.io/version":    in.ImageTag(),
 		"apps.shukra.io/environment":   in.Name,
 	}
+	if in.Annotations["aionos.io/shadow"] == "true" {
+		labels["aionos.io/shadow"] = "true"
+		if patchID := in.Annotations["aionos.io/patch-id"]; patchID != "" {
+			labels["aionos.io/patch-id"] = patchID
+		}
+	}
+	return labels
 }
 
 func (in *AppEnvironment) ServicePort() int32 {

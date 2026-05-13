@@ -20,6 +20,20 @@ required resources for them.
 
 Repository: [github.com/sandy001-kki/Shukra](https://github.com/sandy001-kki/Shukra)
 
+## AIONOS integration
+
+Shukra v0.3.0 adds the AIONOS bridge: a separate `shukra-bridge` gRPC server
+that AIONOS bots can connect to. Bots can list environments, stream health and
+reconcile events, apply audited patches, and create shadow test environments.
+
+`AppEnvironment` also supports optional intent declarations. Shukra evaluates
+the parts it can see from Kubernetes state, such as restart counts and required
+NetworkPolicy presence, while AIONOS bots can write richer measurements such as
+latency, error rate, availability, and cost.
+
+Shadow environments live in `aionos-shadow`, get no real traffic, skip backup
+and migration jobs, use internal hostnames, and can auto-delete after their TTL.
+
 ## Use it now
 
 Shukra is a general Kubernetes Operator, not a Docker-only project.

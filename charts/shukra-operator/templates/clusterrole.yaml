@@ -21,6 +21,14 @@ rules:
   - apiGroups: [""]
     resources: ["services", "configmaps"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Pods are read for intent evaluation using Kubernetes restart state.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  # The bridge creates the dedicated AIONOS shadow namespace on startup.
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch", "create"]
   # Secrets are reference-only. The operator never creates or mutates them.
   - apiGroups: [""]
     resources: ["secrets"]
@@ -40,7 +48,7 @@ rules:
   # Events only need create and patch because the recorder appends lifecycle history.
   - apiGroups: [""]
     resources: ["events"]
-    verbs: ["create", "patch"]
+    verbs: ["get", "list", "watch", "create", "patch"]
   # Leases are required for controller-runtime leader election in HA deployments.
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]

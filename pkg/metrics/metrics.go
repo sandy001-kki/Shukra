@@ -41,6 +41,31 @@ var (
 		Name: "shukra_backup_configured",
 		Help: "Whether backups are configured for environments.",
 	}, []string{"namespace"})
+
+	IntentEvaluationsTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "aionos_intent_evaluation_total",
+		Help: "Count of AIONOS intent evaluations by result.",
+	}, []string{"name", "namespace", "intent_type", "result"})
+
+	ShadowEnvironmentsActive = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "aionos_shadow_environments_active",
+		Help: "Number of active AIONOS shadow environments.",
+	})
+
+	ShadowEnvironmentTTLExpirationsTotal = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "aionos_shadow_environment_ttl_expirations_total",
+		Help: "Count of AIONOS shadow environments deleted after TTL expiry.",
+	})
+
+	BridgePatchApplicationsTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "aionos_bridge_patch_applications_total",
+		Help: "Count of AIONOS bridge patch applications.",
+	}, []string{"name", "namespace", "applied_by", "result"})
+
+	BridgeStreamConnectionsActive = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "aionos_bridge_stream_connections_active",
+		Help: "Active AIONOS bridge streaming RPC connections.",
+	}, []string{"stream_type"})
 )
 
 func MustRegister() {
@@ -52,6 +77,11 @@ func MustRegister() {
 			MigrationsTotal,
 			RestoresTotal,
 			BackupConfigured,
+			IntentEvaluationsTotal,
+			ShadowEnvironmentsActive,
+			ShadowEnvironmentTTLExpirationsTotal,
+			BridgePatchApplicationsTotal,
+			BridgeStreamConnectionsActive,
 		)
 	})
 }

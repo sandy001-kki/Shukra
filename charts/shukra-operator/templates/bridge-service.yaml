@@ -1,0 +1,17 @@
+{{- if .Values.bridge.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: shukra-bridge
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app.kubernetes.io/name: shukra-bridge
+  ports:
+    - name: grpc
+      port: {{ .Values.bridge.grpcPort }}
+      targetPort: grpc
+    - name: metrics
+      port: {{ .Values.bridge.metricsPort }}
+      targetPort: metrics
+{{- end }}

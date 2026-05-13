@@ -36,6 +36,7 @@ import (
 	appsv1beta1 "github.com/sandy001-kki/Shukra/api/v1beta1"
 	"github.com/sandy001-kki/Shukra/internal/finalizer"
 	"github.com/sandy001-kki/Shukra/internal/resources"
+	"github.com/sandy001-kki/Shukra/internal/shadow"
 	statusutil "github.com/sandy001-kki/Shukra/internal/status"
 	"github.com/sandy001-kki/Shukra/pkg/events"
 	shukrametrics "github.com/sandy001-kki/Shukra/pkg/metrics"
@@ -50,12 +51,14 @@ import (
 // +kubebuilder:rbac:groups=apps.shukra.io,resources=appenvironments/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services;configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch;create
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses;networkpolicies,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=batch,resources=jobs;cronjobs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
+// +kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create;patch
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 type AppEnvironmentReconciler struct {
 	client.Client
@@ -73,6 +76,12 @@ type recordLike interface {
 type permanentError struct{ err error }
 
 func (e permanentError) Error() string { return e.err.Error() }
+
+type ReconcileOptions struct {
+	SkipBackup    bool
+	SkipMigration bool
+	ShadowIngress bool
+}
 
 func retryOnConflict(fn func() error) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, fn)
@@ -98,6 +107,10 @@ func (r *AppEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	log = log.WithValues("generation", appEnv.Generation)
 	eventRecorder := events.New(r.EventRecorder)
 	eventRecorder.RecordReconcileStarted(appEnv)
+
+	if shadow.IsShadow(appEnv) {
+		return r.reconcileShadow(ctx, appEnv)
+	}
 
 	if !appEnv.DeletionTimestamp.IsZero() {
 		eventRecorder.RecordDeletionStarted(appEnv)
@@ -170,23 +183,366 @@ func (r *AppEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	appEnv.Status.LastError = ""
 	appEnv.Status.FailureCount = 0
+	if err := r.evaluateIntent(ctx, appEnv, eventRecorder); err != nil {
+		result = "error"
+		return ctrl.Result{}, err
+	}
 	statusutil.SetCondition(&appEnv.Status.Conditions, appsv1beta1.ConditionReady, metav1.ConditionTrue, "Ready", "All resources reconciled", appEnv.Generation)
 	appEnv.Status.Phase = statusutil.ComputePhase(appEnv.Status.Conditions, false, appEnv.Spec.Restore.Enabled && appEnv.Status.LastProcessedRestoreNonce != appEnv.Spec.Restore.TriggerNonce)
 	appEnv.Status.LastSuccessfulReconcileTime = &now
 	return ctrl.Result{}, r.persistStatus(ctx, appEnv)
 }
 
+func (r *AppEnvironmentReconciler) reconcileShadow(ctx context.Context, appEnv *appsv1beta1.AppEnvironment) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx).WithValues("namespace", appEnv.Namespace, "name", appEnv.Name, "shadow", true)
+	eventRecorder := events.New(r.EventRecorder)
+
+	if !appEnv.DeletionTimestamp.IsZero() {
+		eventRecorder.RecordDeletionStarted(appEnv)
+		return finalizer.HandleDeletion(ctx, r.Client, appEnv, log)
+	}
+
+	if ttlSec, hasTTL := shadow.TTLSeconds(appEnv); hasTTL {
+		age := time.Since(appEnv.CreationTimestamp.Time)
+		if age.Seconds() > float64(ttlSec) {
+			eventRecorder.RecordAionosShadowExpired(appEnv)
+			shukrametrics.ShadowEnvironmentTTLExpirationsTotal.Inc()
+			if err := r.Client.Delete(ctx, appEnv); err != nil && !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
+		remaining := time.Duration(ttlSec)*time.Second - age
+		result, err := r.reconcileWithOptions(ctx, appEnv, ReconcileOptions{
+			SkipBackup:    true,
+			SkipMigration: true,
+			ShadowIngress: true,
+		})
+		if err != nil {
+			return result, err
+		}
+		if remaining < 0 {
+			remaining = 0
+		}
+		return ctrl.Result{RequeueAfter: remaining + 5*time.Second}, nil
+	}
+
+	return r.reconcileWithOptions(ctx, appEnv, ReconcileOptions{
+		SkipBackup:    true,
+		SkipMigration: true,
+		ShadowIngress: true,
+	})
+}
+
+func (r *AppEnvironmentReconciler) reconcileWithOptions(ctx context.Context, appEnv *appsv1beta1.AppEnvironment, opts ReconcileOptions) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx).WithValues("namespace", appEnv.Namespace, "name", appEnv.Name)
+	eventRecorder := events.New(r.EventRecorder)
+
+	working := appEnv.DeepCopy()
+	if working.Annotations == nil {
+		working.Annotations = map[string]string{}
+	}
+	working.Annotations[shadow.AnnotationTrafficWeight] = "0"
+	if opts.SkipBackup {
+		working.Spec.Backup.Enabled = false
+	}
+	if opts.SkipMigration {
+		working.Spec.Migration.Enabled = false
+	}
+	if opts.ShadowIngress && working.Spec.Ingress.Enabled {
+		patchID := working.Annotations[shadow.AnnotationShadowPatchID]
+		if patchID == "" {
+			patchID = working.Name
+		}
+		working.Spec.Ingress.Host = fmt.Sprintf("shadow-%s.internal", patchID)
+		working.Spec.Ingress.TLSSecretName = ""
+		working.Spec.Ingress.AllowSharedIngressHost = true
+	}
+
+	if err := finalizer.Ensure(ctx, r.Client, working); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	now := metav1.Now()
+	working.Status.ObservedGeneration = working.Generation
+	working.Status.LastAppliedSpecHash = hashSpec(appEnv.Spec)
+
+	if working.Spec.Paused {
+		statusutil.SetCondition(&working.Status.Conditions, appsv1beta1.ConditionPaused, metav1.ConditionTrue, "Paused", "Reconciliation paused by spec", working.Generation)
+		statusutil.SetCondition(&working.Status.Conditions, appsv1beta1.ConditionReady, metav1.ConditionFalse, "Paused", "Paused resources are not mutated", working.Generation)
+		working.Status.Phase = appsv1beta1.PhasePaused
+		working.Status.LastSuccessfulReconcileTime = &now
+		eventRecorder.RecordPaused(working)
+		return ctrl.Result{}, r.persistStatus(ctx, working)
+	}
+	statusutil.SetCondition(&working.Status.Conditions, appsv1beta1.ConditionPaused, metav1.ConditionFalse, "Running", "Reconciliation active", working.Generation)
+
+	if err := r.validateSpecDependencies(ctx, working); err != nil {
+		statusutil.SetCondition(&working.Status.Conditions, appsv1beta1.ConditionSpecValid, metav1.ConditionFalse, "ValidationFailed", err.Error(), working.Generation)
+		working.Status.Phase = appsv1beta1.PhaseFailed
+		working.Status.LastError = err.Error()
+		working.Status.FailureCount++
+		_ = r.persistStatus(ctx, working)
+		return ctrl.Result{}, permanentError{err: err}
+	}
+	statusutil.SetCondition(&working.Status.Conditions, appsv1beta1.ConditionSpecValid, metav1.ConditionTrue, "Validated", "Specification is valid", working.Generation)
+
+	steps := []func(context.Context, *appsv1beta1.AppEnvironment, events.Recorder, logr.Logger) error{
+		r.reconcileConfigMap,
+		r.validateSecretReferences,
+		r.reconcileService,
+		r.reconcileDeployment,
+		r.reconcileHPA,
+		r.reconcileMigrationJob,
+		r.reconcileRestoreJob,
+		r.reconcileIngress,
+		r.reconcileNetworkPolicy,
+		r.reconcilePDB,
+		r.reconcileBackupCronJob,
+	}
+	for _, step := range steps {
+		if err := step(ctx, working, eventRecorder, log); err != nil {
+			working.Status.FailureCount++
+			working.Status.LastError = err.Error()
+			statusutil.SetCondition(&working.Status.Conditions, appsv1beta1.ConditionReady, metav1.ConditionFalse, "TransientError", err.Error(), working.Generation)
+			_ = r.persistStatus(ctx, working)
+			return ctrl.Result{}, err
+		}
+	}
+
+	working.Status.LastError = ""
+	working.Status.FailureCount = 0
+	if err := r.evaluateIntent(ctx, working, eventRecorder); err != nil {
+		return ctrl.Result{}, err
+	}
+	statusutil.SetCondition(&working.Status.Conditions, appsv1beta1.ConditionReady, metav1.ConditionTrue, "Ready", "Shadow environment reconciled", working.Generation)
+	working.Status.Phase = statusutil.ComputePhase(working.Status.Conditions, false, working.Spec.Restore.Enabled && working.Status.LastProcessedRestoreNonce != working.Spec.Restore.TriggerNonce)
+	working.Status.LastSuccessfulReconcileTime = &now
+	r.refreshShadowActiveMetric(ctx)
+	return ctrl.Result{}, r.persistStatus(ctx, working)
+}
+
+func (r *AppEnvironmentReconciler) refreshShadowActiveMetric(ctx context.Context) {
+	list := &appsv1beta1.AppEnvironmentList{}
+	if err := r.List(ctx, list, client.InNamespace(shadow.ShadowNamespace)); err != nil {
+		return
+	}
+	var active float64
+	for _, item := range list.Items {
+		if item.DeletionTimestamp.IsZero() && shadow.IsShadow(&item) {
+			active++
+		}
+	}
+	shukrametrics.ShadowEnvironmentsActive.Set(active)
+}
+
 func (r *AppEnvironmentReconciler) persistStatus(ctx context.Context, appEnv *appsv1beta1.AppEnvironment) error {
 	desired := appEnv.DeepCopy().Status
 	key := types.NamespacedName{Name: appEnv.Name, Namespace: appEnv.Namespace}
-	return retryOnConflict(func() error {
+	var lastErr error
+	for attempt := 0; attempt < 5; attempt++ {
 		current := &appsv1beta1.AppEnvironment{}
 		if err := r.Get(ctx, key, current); err != nil {
 			return err
 		}
+		patch := client.MergeFrom(current.DeepCopy())
 		current.Status = desired
-		return r.Status().Update(ctx, current)
-	})
+		err := r.Status().Patch(ctx, current, patch)
+		if err == nil {
+			return nil
+		}
+		if !apierrors.IsConflict(err) {
+			return err
+		}
+		lastErr = err
+		time.Sleep(time.Duration(attempt+1) * 100 * time.Millisecond)
+	}
+	return fmt.Errorf("status update conflict after 5 attempts: %w", lastErr)
+}
+
+func (r *AppEnvironmentReconciler) evaluateIntent(ctx context.Context, appEnv *appsv1beta1.AppEnvironment, recorder events.Recorder) error {
+	if appEnv.Spec.Intent == nil {
+		appEnv.Status.IntentHealth = nil
+		return nil
+	}
+
+	now := metav1.Now()
+	conditions := make([]appsv1beta1.IntentCondition, 0, 4)
+	pods, err := r.environmentPods(ctx, appEnv)
+	if err != nil {
+		return err
+	}
+
+	if perf := appEnv.Spec.Intent.Performance; perf != nil {
+		if perf.LatencyP99Ms != nil {
+			restarts := totalRestartCount(pods)
+			condition := appsv1beta1.IntentCondition{
+				Type:      "LatencyP99",
+				Status:    "Unknown",
+				Measured:  fmt.Sprintf("podRestarts=%d", restarts),
+				Declared:  fmt.Sprintf("%dms", *perf.LatencyP99Ms),
+				Message:   "Latency requires AIONOS VERAN measurements; Kubernetes restart state recorded as proxy context",
+				LastCheck: now,
+			}
+			conditions = append(conditions, condition)
+			shukrametrics.IntentEvaluationsTotal.WithLabelValues(appEnv.Name, appEnv.Namespace, condition.Type, condition.Status).Inc()
+		}
+		if perf.ErrorRatePct != nil {
+			condition := appsv1beta1.IntentCondition{
+				Type:      "ErrorRate",
+				Status:    "Unknown",
+				Measured:  "unavailable",
+				Declared:  fmt.Sprintf("%.2f%%", *perf.ErrorRatePct),
+				Message:   "Error rate requires AIONOS VERAN measurements",
+				LastCheck: now,
+			}
+			conditions = append(conditions, condition)
+			shukrametrics.IntentEvaluationsTotal.WithLabelValues(appEnv.Name, appEnv.Namespace, condition.Type, condition.Status).Inc()
+		}
+		if perf.ThroughputRPS != nil {
+			condition := appsv1beta1.IntentCondition{
+				Type:      "ThroughputRPS",
+				Status:    "Unknown",
+				Measured:  "unavailable",
+				Declared:  fmt.Sprintf("%drps", *perf.ThroughputRPS),
+				Message:   "Throughput requires AIONOS VERAN measurements",
+				LastCheck: now,
+			}
+			conditions = append(conditions, condition)
+			shukrametrics.IntentEvaluationsTotal.WithLabelValues(appEnv.Name, appEnv.Namespace, condition.Type, condition.Status).Inc()
+		}
+	}
+
+	if rel := appEnv.Spec.Intent.Reliability; rel != nil {
+		if rel.MaxRestartsPer1h != nil {
+			maxRestarts := maxPodRestartCount(pods)
+			status := "Satisfied"
+			message := "Pod restart counts are within declared threshold"
+			if maxRestarts > *rel.MaxRestartsPer1h {
+				status = "Violated"
+				message = "At least one pod exceeds declared restart threshold"
+			}
+			condition := appsv1beta1.IntentCondition{
+				Type:      "MaxRestartsPer1h",
+				Status:    status,
+				Measured:  fmt.Sprintf("%d", maxRestarts),
+				Declared:  fmt.Sprintf("%d", *rel.MaxRestartsPer1h),
+				Message:   message,
+				LastCheck: now,
+			}
+			conditions = append(conditions, condition)
+			recordIntentEvent(recorder, appEnv, condition)
+			shukrametrics.IntentEvaluationsTotal.WithLabelValues(appEnv.Name, appEnv.Namespace, condition.Type, condition.Status).Inc()
+		}
+		if rel.AvailabilityPct != nil {
+			condition := appsv1beta1.IntentCondition{
+				Type:      "Availability",
+				Status:    "Unknown",
+				Measured:  "unavailable",
+				Declared:  fmt.Sprintf("%.2f%%", *rel.AvailabilityPct),
+				Message:   "Availability requires AIONOS VERAN measurements",
+				LastCheck: now,
+			}
+			conditions = append(conditions, condition)
+			shukrametrics.IntentEvaluationsTotal.WithLabelValues(appEnv.Name, appEnv.Namespace, condition.Type, condition.Status).Inc()
+		}
+	}
+
+	if cost := appEnv.Spec.Intent.Cost; cost != nil && cost.MaxUSDPerHour != nil {
+		condition := appsv1beta1.IntentCondition{
+			Type:      "Cost",
+			Status:    "Unknown",
+			Measured:  "unavailable",
+			Declared:  fmt.Sprintf("$%.4f/hour", *cost.MaxUSDPerHour),
+			Message:   "Cost requires AIONOS cloud billing measurements",
+			LastCheck: now,
+		}
+		conditions = append(conditions, condition)
+		shukrametrics.IntentEvaluationsTotal.WithLabelValues(appEnv.Name, appEnv.Namespace, condition.Type, condition.Status).Inc()
+	}
+
+	if sec := appEnv.Spec.Intent.Security; sec != nil && sec.RequireNetworkPolicy {
+		exists, err := r.networkPolicyExists(ctx, appEnv)
+		if err != nil {
+			return err
+		}
+		status := "Satisfied"
+		message := "NetworkPolicy child resource exists"
+		measured := "present"
+		if !exists {
+			status = "Violated"
+			message = "NetworkPolicy child resource is missing"
+			measured = "missing"
+		}
+		condition := appsv1beta1.IntentCondition{
+			Type:      "RequireNetworkPolicy",
+			Status:    status,
+			Measured:  measured,
+			Declared:  "required",
+			Message:   message,
+			LastCheck: now,
+		}
+		conditions = append(conditions, condition)
+		recordIntentEvent(recorder, appEnv, condition)
+		shukrametrics.IntentEvaluationsTotal.WithLabelValues(appEnv.Name, appEnv.Namespace, condition.Type, condition.Status).Inc()
+	}
+
+	appEnv.Status.IntentHealth = conditions
+	return nil
+}
+
+func (r *AppEnvironmentReconciler) environmentPods(ctx context.Context, appEnv *appsv1beta1.AppEnvironment) ([]corev1.Pod, error) {
+	podList := &corev1.PodList{}
+	if err := r.List(ctx, podList, client.InNamespace(appEnv.Namespace), client.MatchingLabels{"apps.shukra.io/environment": appEnv.Name}); err != nil {
+		return nil, err
+	}
+	return podList.Items, nil
+}
+
+func (r *AppEnvironmentReconciler) networkPolicyExists(ctx context.Context, appEnv *appsv1beta1.AppEnvironment) (bool, error) {
+	name := appEnv.Status.ChildResources.NetworkPolicyName
+	if name == "" {
+		name = resources.Name(appEnv, "networkpolicy")
+	}
+	netpol := &networkingv1.NetworkPolicy{}
+	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: appEnv.Namespace}, netpol)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+func totalRestartCount(pods []corev1.Pod) int32 {
+	var total int32
+	for _, pod := range pods {
+		for _, status := range pod.Status.ContainerStatuses {
+			total += status.RestartCount
+		}
+	}
+	return total
+}
+
+func maxPodRestartCount(pods []corev1.Pod) int32 {
+	var max int32
+	for _, pod := range pods {
+		var podTotal int32
+		for _, status := range pod.Status.ContainerStatuses {
+			podTotal += status.RestartCount
+		}
+		if podTotal > max {
+			max = podTotal
+		}
+	}
+	return max
+}
+
+func recordIntentEvent(recorder events.Recorder, appEnv *appsv1beta1.AppEnvironment, condition appsv1beta1.IntentCondition) {
+	switch condition.Status {
+	case "Violated":
+		recorder.RecordAionosIntentViolated(appEnv, condition.Type)
+	case "Satisfied":
+		recorder.RecordAionosIntentSatisfied(appEnv, condition.Type)
+	}
 }
 
 func (r *AppEnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {

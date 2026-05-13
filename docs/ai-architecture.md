@@ -18,6 +18,7 @@ model.
 User
   -> Shukra CLI / chat
   -> Intent interpretation layer
+  -> AIONOS Bridge (for bot integration)
   -> Grounding layer (docs, examples, CRD, status)
   -> Optional model runtime
   -> Guardrail layer
@@ -50,6 +51,23 @@ This layer decides what the user is asking for:
 
 Today, the repo already includes a deterministic English parser for common chat
 commands. That is the first bridge toward a fuller AI interface.
+
+For AIONOS, intent can also arrive through the `shukra-bridge` gRPC API. The
+bridge records patch audit history and lets the operator remain the deterministic
+executor.
+
+## Layer 2b: AIONOS bridge
+
+The bridge exposes `aionos.bridge.v1.AionosBridge` for AIONOS bots:
+
+- VERAN streams health and supplies richer measurements
+- FLUXON streams reconcile events
+- KAIROX applies audited spec or status patches
+- SPECRYN creates and deletes shadow environments
+- CAELITH streams intent violations
+
+The bridge runs separately from the operator, so bridge failure does not stop
+normal reconciliation.
 
 ## Layer 3: Grounding
 
@@ -151,6 +169,8 @@ architecture:
 - AI workspace structure
 - dataset generation script
 - readiness evaluation script
+- AIONOS bridge API and runtime integration
+- intent and shadow-environment control surfaces
 
 That allows the project to move into retrieval and model work later without
 starting from scratch.

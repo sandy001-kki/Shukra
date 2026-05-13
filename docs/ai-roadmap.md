@@ -23,6 +23,7 @@ Build a Shukra-specific assistant that can:
 - diagnose install and reconcile issues
 - suggest or run Shukra CLI workflows
 - summarize status from the cluster
+- connect AIONOS bots to live `AppEnvironment` state through the bridge
 - stay aligned with the CRD, docs, and actual controller behavior
 
 ## Phase 0: Repo-grounded knowledge base
@@ -131,6 +132,19 @@ Required constraints:
 - no secret values shown
 - no cross-namespace leakage
 
+## Phase 6: AIONOS integration
+
+Objective:
+- let AIONOS bots observe and safely act on Shukra-managed environments
+
+Implemented in v0.3.0:
+- `shukra-bridge` gRPC server
+- health, reconcile-event, and intent-violation streams
+- audited patch application
+- shadow environment creation and deletion
+- optional intent declarations in `AppEnvironment`
+- patch audit trail in status
+
 ## Data sources
 
 The Shukra assistant should learn from:
@@ -179,6 +193,9 @@ This repo already includes:
 - `hack/prepare-ai-dataset.ps1`
 - `hack/evaluate-ai-readiness.ps1`
 - `ai/README.md`
+- `cmd/shukra-bridge`
+- `api/bridge/v1/bridge.proto`
+- intent and shadow protocol support
 
 That means the planning and scaffolding layer is ready even before a model
 runtime is chosen.

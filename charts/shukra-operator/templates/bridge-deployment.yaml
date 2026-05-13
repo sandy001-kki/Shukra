@@ -1,0 +1,66 @@
+{{- if .Values.bridge.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shukra-bridge
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.bridge.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shukra-bridge
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: shukra-bridge
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      securityContext:
+{{ toYaml .Values.securityContext | indent 8 }}
+      containers:
+        - name: bridge
+          image: "{{ .Values.bridge.image.repository }}:{{ .Values.bridge.image.tag }}"
+          imagePullPolicy: {{ .Values.bridge.image.pullPolicy }}
+          command:
+            - /shukra-bridge
+          args:
+            - --bind-address=:{{ .Values.bridge.grpcPort }}
+            - --metrics-bind-address=:{{ .Values.bridge.metricsPort }}
+            - --tls-cert-file=/tls/tls.crt
+            - --tls-key-file=/tls/tls.key
+            - --client-ca-file=/client-ca/ca.crt
+            - --require-client-cert=true
+          env:
+            - name: AIONOS_ENDPOINT
+              value: {{ .Values.bridge.aionosEndpoint | quote }}
+            {{- if .Values.bridge.apiKey }}
+            - name: AIONOS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: shukra-bridge-aionos
+                  key: api-key
+            {{- end }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.bridge.grpcPort }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.bridge.metricsPort }}
+              protocol: TCP
+          volumeMounts:
+            - name: bridge-tls
+              mountPath: /tls
+              readOnly: true
+            - name: bridge-client-ca
+              mountPath: /client-ca
+              readOnly: true
+          resources:
+{{ toYaml .Values.bridge.resources | indent 12 }}
+      volumes:
+        - name: bridge-tls
+          secret:
+            secretName: {{ .Values.bridge.tls.secretName }}
+        - name: bridge-client-ca
+          secret:
+            secretName: {{ .Values.bridge.tls.clientCASecretName }}
+{{- end }}

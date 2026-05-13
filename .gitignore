@@ -4,3 +4,14 @@
 *.exe
 .DS_Store
 Thumbs.db
+
+# Local configuration and secret material must never be committed.
+*.env
+.env.*
+config/local.yaml
+*_secret.yaml
+*_secrets.yaml
+*.key
+*.pem
+*.crt
+*.kubeconfig

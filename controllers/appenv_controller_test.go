@@ -27,6 +27,7 @@ import (
 	appsv1alpha1 "github.com/sandy001-kki/Shukra/api/v1alpha1"
 	appsv1beta1 "github.com/sandy001-kki/Shukra/api/v1beta1"
 	"github.com/sandy001-kki/Shukra/controllers"
+	"github.com/sandy001-kki/Shukra/internal/shadow"
 	"github.com/sandy001-kki/Shukra/webhooks"
 )
 
@@ -208,6 +209,20 @@ var _ = Describe("AppEnvironment", func() {
 		invalidMigration.Spec.Migration.MigrationID = "v1"
 		_, err = validator.ValidateCreate(ctx, invalidMigration)
 		Expect(err).To(HaveOccurred())
+
+		invalidIntent := basicEnv("invalid-intent")
+		latency := int64(0)
+		errorRate := 101.0
+		availability := -1.0
+		maxCost := 0.0
+		invalidIntent.Spec.Intent = &appsv1beta1.IntentSpec{
+			Performance: &appsv1beta1.PerformanceIntent{LatencyP99Ms: &latency, ErrorRatePct: &errorRate},
+			Reliability: &appsv1beta1.ReliabilityIntent{AvailabilityPct: &availability},
+			Cost:        &appsv1beta1.CostIntent{MaxUSDPerHour: &maxCost},
+			Security:    &appsv1beta1.SecurityIntent{AllowedEgressDomains: []string{"not a domain"}},
+		}
+		_, err = validator.ValidateCreate(ctx, invalidIntent)
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("9. cross-namespace secret references are rejected conceptually", func() {
@@ -240,6 +255,38 @@ var _ = Describe("AppEnvironment", func() {
 		newObj := basicEnv("predicate")
 		newObj.Status.Phase = appsv1beta1.PhaseRunning
 		Expect(p.Update(event.UpdateEvent{ObjectOld: oldObj, ObjectNew: newObj})).To(BeFalse())
+	})
+
+	It("12. shadow TTL expiry deletes the shadow environment", func() {
+		appEnv := basicEnv("shadow-expire")
+		appEnv.Annotations = map[string]string{
+			shadow.AnnotationShadow:        "true",
+			shadow.AnnotationShadowPatchID: "ttl-test",
+			shadow.AnnotationShadowTTLSec:  "0",
+		}
+		Expect(k8sClient.Create(ctx, appEnv)).To(Succeed())
+		Eventually(func() bool {
+			current := &appsv1beta1.AppEnvironment{}
+			return client.IgnoreNotFound(k8sClient.Get(ctx, key("demo", "shadow-expire"), current)) == nil && current.Name == ""
+		}).WithTimeout(20 * time.Second).Should(BeTrue())
+	})
+
+	It("13. intent evaluation records Kubernetes-visible violations", func() {
+		appEnv := basicEnv("intent-security")
+		appEnv.Spec.Intent = &appsv1beta1.IntentSpec{
+			Security: &appsv1beta1.SecurityIntent{RequireNetworkPolicy: true},
+		}
+		Expect(k8sClient.Create(ctx, appEnv)).To(Succeed())
+		Eventually(func() string {
+			current := &appsv1beta1.AppEnvironment{}
+			_ = k8sClient.Get(ctx, key("demo", "intent-security"), current)
+			for _, condition := range current.Status.IntentHealth {
+				if condition.Type == "RequireNetworkPolicy" {
+					return condition.Status
+				}
+			}
+			return ""
+		}).WithTimeout(20 * time.Second).Should(Equal("Violated"))
 	})
 })
 
