@@ -20,7 +20,7 @@ generate:
 manifests:
 	$(CONTROLLER_GEN) \
 		rbac:roleName=manager-role \
-		crd \
+		crd:allowDangerousTypes=true \
 		webhook \
 		paths="./..." \
 		output:crd:artifacts:config=config/crd/bases

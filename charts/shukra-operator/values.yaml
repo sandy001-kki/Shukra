@@ -33,7 +33,7 @@ serviceAccount:
   create: true
   name: shukra-operator
 bridge:
-  enabled: true
+  enabled: false
   replicaCount: 1
   aionosEndpoint: ""
   apiKey: ""

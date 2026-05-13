@@ -162,7 +162,8 @@ The metrics service port.
 
 ### `bridge.enabled`
 
-Deploys the `shukra-bridge` gRPC server. Keep this enabled when AIONOS bots
+Deploys the `shukra-bridge` gRPC server. The default is disabled so existing
+operator-only installs and smoke tests stay lean. Enable it when AIONOS bots
 need to connect to Shukra.
 
 ### `bridge.grpcPort`
