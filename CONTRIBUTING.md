@@ -8,7 +8,8 @@ API compatibility, safety, and day-two operations, not just code style.
 ## Contribution workflow
 
 1. Fork the repository at [github.com/sandy001-kki/Shukra](https://github.com/sandy001-kki/Shukra).
-2. Create a focused branch from `main`.
+2. Create a focused branch from `main`. Use a short prefix that describes the
+   work, such as `docs/`, `fix/`, `feat/`, `test/`, or `chore/`.
 3. Make your change with clear commit messages.
 4. Run the required generation and validation steps before opening a pull request.
 5. Open the pull request with a clear description of:
@@ -16,6 +17,24 @@ API compatibility, safety, and day-two operations, not just code style.
    - why it changed
    - any API or behavior impact
    - how you tested it
+
+## Operator contributor notes
+
+Shukra is a Kubernetes Operator, so some files are source files and some are
+generated from those source files. Keep these rules in mind:
+
+- Keep pull requests small. One behavior change, one documentation improvement,
+  or one test-focused cleanup is easier to review than a mixed batch.
+- If you change API types under `api/`, run `make generate` and commit the
+  updated deepcopy files.
+- If you change CRD markers, RBAC markers, webhooks, or API validation, run
+  `make manifests` and commit the updated files under `config/`.
+- If you change the AppEnvironment schema, update the matching example or docs
+  so users can see the new field in context.
+- If a change affects Helm installation, run `helm lint charts/shukra-operator`
+  and mention any values you used for rendering or testing.
+- Do not hand-edit generated YAML to hide a generator issue. Fix the source
+  marker or type definition instead.
 
 ## Required checks before a pull request
 
